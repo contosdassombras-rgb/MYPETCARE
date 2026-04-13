@@ -8,6 +8,8 @@ interface UserProfile {
   phone: string;
   pushEnabled: boolean;
   emailEnabled: boolean;
+  role: 'admin' | 'user';
+  active: boolean;
 }
 
 interface UserContextType {
@@ -15,6 +17,7 @@ interface UserContextType {
   updateUser: (updates: Partial<UserProfile>) => void;
   resetPhoto: () => void;
   loading: boolean;
+  isAdmin: boolean;
 }
 
 const DEFAULT_USER: UserProfile = {
@@ -23,6 +26,8 @@ const DEFAULT_USER: UserProfile = {
   phone: '',
   pushEnabled: false,
   emailEnabled: true,
+  role: 'user',
+  active: true,
 };
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -74,6 +79,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           phone: data.phone || '',
           pushEnabled: data.push_enabled,
           emailEnabled: data.email_enabled,
+          role: data.role as 'admin' | 'user' || 'user',
+          active: data.active ?? true,
         });
       } else {
         // Create profile if it doesn't exist
@@ -84,6 +91,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           phone: '',
           push_enabled: false,
           email_enabled: true,
+          role: 'user',
+          active: true,
         };
         const { error: insertError } = await supabase
           .from('profiles')
@@ -98,6 +107,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           phone: newProfile.phone,
           pushEnabled: newProfile.push_enabled,
           emailEnabled: newProfile.email_enabled,
+          role: newProfile.role as 'admin' | 'user',
+          active: newProfile.active,
         });
       }
     } catch (err) {
@@ -121,6 +132,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (updates.phone !== undefined) dbUpdates.phone = updates.phone || '';
       if (updates.pushEnabled !== undefined) dbUpdates.push_enabled = updates.pushEnabled;
       if (updates.emailEnabled !== undefined) dbUpdates.email_enabled = updates.emailEnabled;
+      if (updates.role !== undefined) dbUpdates.role = updates.role;
+      if (updates.active !== undefined) dbUpdates.active = updates.active;
 
       const { error } = await supabase
         .from('profiles')
@@ -136,7 +149,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <UserContext.Provider value={{ user, updateUser, resetPhoto, loading }}>
+    <UserContext.Provider value={{ user, updateUser, resetPhoto, loading, isAdmin: user.role === 'admin' }}>
       {children}
     </UserContext.Provider>
   );

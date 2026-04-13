@@ -16,10 +16,12 @@ import { Settings } from './pages/Settings';
 import { Veterinarian } from './pages/Veterinarian';
 import { Reports } from './pages/Reports';
 import { Symptoms } from './pages/Symptoms';
+import { Admin } from './pages/Admin';
 import { Auth } from './pages/Auth';
 import { supabase } from './lib/supabase';
 import { Session } from '@supabase/supabase-js';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ShieldAlert } from 'lucide-react';
+import { useUser } from './contexts/UserContext';
 
 const AppRoutes: React.FC = () => {
   const { language } = useLanguage();
@@ -74,6 +76,14 @@ const AppRoutes: React.FC = () => {
         <Route path="reports" element={<Reports />} />
         <Route path="symptoms" element={<Symptoms />} />
         <Route path="profile" element={<Settings />} />
+        
+        {/* Admin Routes */}
+        <Route 
+          path="admin" 
+          element={
+            user.role === 'admin' ? <Admin /> : <Navigate to="/" replace />
+          } 
+        />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

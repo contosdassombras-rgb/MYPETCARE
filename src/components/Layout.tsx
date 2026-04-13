@@ -1,6 +1,6 @@
 import React from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { Bell, LayoutDashboard, Calendar, MapPin, User, Plus, ArrowLeft, LogOut } from 'lucide-react';
+import { Bell, LayoutDashboard, Calendar, MapPin, User, Plus, ArrowLeft, LogOut, Shield } from 'lucide-react';
 import * as m from 'motion/react';
 const { motion, AnimatePresence } = m;
 import { useLanguage } from '../contexts/LanguageContext';
@@ -10,7 +10,7 @@ import { Button } from './ui/Button';
 
 export const Layout: React.FC = () => {
   const { t } = useLanguage();
-  const { user } = useUser();
+  const { user, isAdmin } = useUser();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -22,6 +22,10 @@ export const Layout: React.FC = () => {
     { icon: MapPin, label: t('clinics'), path: '/professionals' },
     { icon: User, label: t('profile'), path: '/profile' },
   ];
+
+  if (isAdmin) {
+    navItems.splice(3, 0, { icon: Shield, label: 'Admin', path: '/admin' });
+  }
 
   return (
     <div className="min-h-screen flex bg-surface">
@@ -68,7 +72,7 @@ export const Layout: React.FC = () => {
             </div>
             <div className="flex-1 overflow-hidden">
               <p className="text-sm font-bold text-on-surface truncate">{user.name}</p>
-              <p className="text-[10px] text-on-surface-variant uppercase tracking-widest font-black opacity-60">Tutor</p>
+              <p className="text-[10px] text-on-surface-variant uppercase tracking-widest font-black opacity-60">{isAdmin ? 'Admin' : 'Tutor'}</p>
             </div>
             <button className="p-2 text-error hover:bg-error/10 rounded-full transition-colors">
               <LogOut className="w-5 h-5" />

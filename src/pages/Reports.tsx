@@ -7,7 +7,7 @@ import { usePets } from '../contexts/PetContext';
 import { useUser } from '../contexts/UserContext';
 import { 
   FileText, Printer, Share2, TrendingUp, Syringe, Pill, 
-  MessageSquare, Paperclip, Calendar, Activity, Utensils, Send
+  MessageSquare, Paperclip, Calendar, Activity, Utensils, Send, Plus
 } from 'lucide-react';
 import { cn, calculateAge, formatDate } from '../lib/utils';
 import { Card } from '../components/ui/Card';

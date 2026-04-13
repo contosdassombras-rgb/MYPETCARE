@@ -153,7 +153,7 @@ export const PetForm: React.FC = () => {
     const files = e.target.files;
     if (!files) return;
 
-    Array.from(files).forEach(file => {
+    Array.from(files).forEach((file: any) => {
       if (file.size > 5 * 1024 * 1024) {
         alert("Arquivo muito grande. Limite de 5MB para salvamento local.");
         return;
@@ -171,8 +171,6 @@ export const PetForm: React.FC = () => {
             attachments: [base64],
             attachmentType: file.type.includes('pdf') ? 'pdf' : (file.type.includes('word') ? 'doc' : 'img')
           });
-          setSaveSuccess(true);
-          setTimeout(() => setSaveSuccess(false), 3000);
         } else {
           setDocumentFiles(prev => [...prev, { name: file.name, type: file.type, url: base64 }]);
         }

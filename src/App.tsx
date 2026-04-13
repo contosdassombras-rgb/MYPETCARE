@@ -30,9 +30,9 @@ const AppRoutes: React.FC = () => {
   usePushNotifications(); 
 
   const isAuthenticated = !!session;
-  const isLoading = contextLoading;
   
-  if (isLoading) {
+  // CARREGAMENTO GLOBAL - mostrado UMA VEZ no início
+  if (contextLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-surface">
         <Loader2 className="w-10 h-10 animate-spin text-primary opacity-20" />
@@ -48,16 +48,12 @@ const AppRoutes: React.FC = () => {
     return <Auth />;
   }
 
-  // Admin Guard: Proteção de nível superior para a rota /admin
-  if (!isAdmin && window.location.pathname === '/admin') {
-    console.log('DEBUG: Admin Access Denied. Redirecting to home.');
-    return <Navigate to="/" replace />;
-  }
-
   return (
     <Routes>
-      <Route path="/admin" element={<Admin />} />
+      {/* ROTA DE ADMIN - SEM loading logic dentro */}
+      {isAdmin && <Route path="/admin" element={<Admin />} />}
 
+      {/* ROTA LAYOUT COM TODAS AS OUTRAS */}
       <Route element={<Layout />}>
         <Route index element={<Dashboard />} />
         <Route path="pet/:id" element={<PetProfile />} />
@@ -70,6 +66,8 @@ const AppRoutes: React.FC = () => {
         <Route path="symptoms" element={<Symptoms />} />
         <Route path="profile" element={<Settings />} />
       </Route>
+
+      {/* FALLBACK - qualquer rota não definida vai pro dashboard */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

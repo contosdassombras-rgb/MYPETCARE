@@ -41,38 +41,54 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Initial Session Load
-    const initAuth = async () => {
+    let mounted = true;
+
+    const init = async () => {
+      console.log('DEBUG: Auth Initializing...');
       try {
         const { data: { session: initialSession } } = await supabase.auth.getSession();
+        if (!mounted) return;
+        
         setSession(initialSession);
+        console.log('DEBUG: Initial Session:', initialSession?.user.email || 'None');
+        
         if (initialSession?.user) {
           await loadProfile(initialSession.user.id);
+        } else {
+          setLoading(false);
         }
       } catch (err) {
-        console.error('Initial auth error:', err);
-      } finally {
-        setLoading(false);
+        console.error('DEBUG: Auth Initialization Error:', err);
+        if (mounted) setLoading(false);
       }
     };
 
-    initAuth();
+    init();
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+      console.log('DEBUG: Auth Event:', event, currentSession?.user.email);
+      if (!mounted) return;
+
       setSession(currentSession);
-      if (currentSession?.user) {
-        await loadProfile(currentSession.user.id);
-      } else {
+      
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        if (currentSession?.user) {
+          await loadProfile(currentSession.user.id);
+        }
+      } else if (event === 'SIGNED_OUT') {
         setUser(DEFAULT_USER);
         setLoading(false);
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const loadProfile = async (userId: string) => {
+    console.log('DEBUG: loadProfile starting for:', userId);
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -81,15 +97,15 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('id', userId)
         .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+      if (error && error.code !== 'PGRST116') {
+        console.error('DEBUG: loadProfile DB Error:', error);
         throw error;
       }
+
       if (data) {
-        console.log('DEBUG: Profile loaded from DB:', {
-          id: data.id,
-          email: session?.user.email,
+        console.log('DEBUG: Profile fetched successfully:', {
           role: data.role,
-          active: data.active
+          name: data.name
         });
 
         setUser({
@@ -97,13 +113,13 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           name: data.name || DEFAULT_USER.name,
           photo: data.photo_url || DEFAULT_USER.photo,
           phone: data.phone || '',
-          pushEnabled: data.push_enabled,
-          emailEnabled: data.email_enabled,
+          pushEnabled: data.push_enabled || false,
+          emailEnabled: data.email_enabled || false,
           role: data.role as 'admin' | 'user' || 'user',
           active: data.active ?? true,
         });
       } else {
-        // Create profile if it doesn't exist
+        console.log('DEBUG: Profile not found, creating new one...');
         const newProfile = {
           id: userId,
           name: DEFAULT_USER.name,
@@ -118,7 +134,10 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .from('profiles')
           .insert([newProfile]);
         
-        if (insertError) throw insertError;
+        if (insertError) {
+          console.error('DEBUG: Profile insertion error:', insertError);
+          throw insertError;
+        }
         
         setUser({
           id: userId,
@@ -132,8 +151,9 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
       }
     } catch (err) {
-      console.error('Error loading profile:', err);
+      console.error('DEBUG: Error in loadProfile:', err);
     } finally {
+      console.log('DEBUG: loadProfile finished, setting loading to false.');
       setLoading(false);
     }
   };

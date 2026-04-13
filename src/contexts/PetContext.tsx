@@ -56,32 +56,23 @@ interface PetContextType {
 
 const PetContext = createContext<PetContextType | undefined>(undefined);
 
+import { useUser } from './UserContext';
+
 export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [pets, setPets] = useState<Pet[]>([]);
   const [loading, setLoading] = useState(true);
+  const { session } = useUser();
 
   useEffect(() => {
-    // Escutar mudanças na autenticação
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        loadData();
-      } else {
-        setPets([]);
-        setLoading(false);
-      }
-    });
-
-    // Carga inicial
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        loadData();
-      } else {
-        setLoading(false);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
+    if (session?.user) {
+      loadData();
+    } else {
+      setPets([]);
+      // Se não houver sessão, o UserContext cuidará do loading global, 
+      // mas aqui limpamos o estado local.
+      setLoading(false);
+    }
+  }, [session?.user.id]);
 
   const loadData = async () => {
     try {

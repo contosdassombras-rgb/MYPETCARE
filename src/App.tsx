@@ -31,7 +31,6 @@ const AppRoutes: React.FC = () => {
 
   const isAuthenticated = !!session;
   
-  // CARREGAMENTO GLOBAL - mostrado UMA VEZ no início
   if (contextLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-surface">
@@ -50,10 +49,8 @@ const AppRoutes: React.FC = () => {
 
   return (
     <Routes>
-      {/* ROTA DE ADMIN - SEM loading logic dentro */}
       {isAdmin && <Route path="/admin" element={<Admin />} />}
 
-      {/* ROTA LAYOUT COM TODAS AS OUTRAS */}
       <Route element={<Layout />}>
         <Route index element={<Dashboard />} />
         <Route path="pet/:id" element={<PetProfile />} />
@@ -66,8 +63,6 @@ const AppRoutes: React.FC = () => {
         <Route path="symptoms" element={<Symptoms />} />
         <Route path="profile" element={<Settings />} />
       </Route>
-
-      {/* FALLBACK - qualquer rota não definida vai pro dashboard */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

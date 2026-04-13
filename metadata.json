@@ -1,0 +1,7 @@
+{
+  "name": "MyPetCare",
+  "description": "A premium PWA for pet health management, routine tracking, and veterinary care coordination.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}

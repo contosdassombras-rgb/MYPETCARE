@@ -46,8 +46,8 @@ const AppRoutes: React.FC = () => {
 
   usePushNotifications(); 
 
-  const isAuthenticated = true; // Liberação temporária de acesso para testes e desenvolvimento
-
+  const isAuthenticated = !!session;
+  
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-surface">

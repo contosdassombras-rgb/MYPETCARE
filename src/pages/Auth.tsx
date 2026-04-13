@@ -15,7 +15,7 @@ export const Auth: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
-  const [mode, setMode] = useState<AuthMode>('magic_link');
+  const [mode, setMode] = useState<AuthMode>('password');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -175,7 +175,7 @@ export const Auth: React.FC = () => {
                     try {
                       // Sign in with the manually confirmed test account
                       const testEmail = 'marcellolachi111@gmail.com';
-                      const testPass = 'mypetcare123';
+                      const testPass = 'teste123';
                       
                       const { error } = await supabase.auth.signInWithPassword({
                         email: testEmail,

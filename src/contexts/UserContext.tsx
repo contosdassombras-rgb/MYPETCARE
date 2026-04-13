@@ -49,10 +49,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Initial check
     supabase.auth.getUser().then(({ data: { user } }) => {
-      // Bypass ID for development speed/direct access
-      const devModeId = '24b2f3ec-aca9-4eaf-8e36-a8538a274c7f';
       if (user) loadProfile(user.id);
-      else loadProfile(devModeId);
+      else setLoading(false);
     });
 
     return () => subscription.unsubscribe();

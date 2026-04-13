@@ -74,7 +74,11 @@ export const Layout: React.FC = () => {
               <p className="text-sm font-bold text-on-surface truncate">{user.name}</p>
               <p className="text-[10px] text-on-surface-variant uppercase tracking-widest font-black opacity-60">{isAdmin ? 'Admin' : 'Tutor'}</p>
             </div>
-            <button className="p-2 text-error hover:bg-error/10 rounded-full transition-colors">
+            <button 
+              onClick={() => supabase.auth.signOut()}
+              className="p-2 text-error hover:bg-error/10 rounded-full transition-colors"
+              title={t('logout')}
+            >
               <LogOut className="w-5 h-5" />
             </button>
           </div>

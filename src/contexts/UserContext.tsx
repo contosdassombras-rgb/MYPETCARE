@@ -84,7 +84,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
         throw error;
       }
-
+      if (data) {
         console.log('DEBUG: Profile loaded from DB:', {
           id: data.id,
           email: session?.user.email,
@@ -141,9 +141,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateUser = async (updates: Partial<UserProfile>) => {
     setUser(prev => ({ ...prev, ...updates }));
 
-    const session = await supabase.auth.getSession();
-    const devModeId = '24b2f3ec-aca9-4eaf-8e36-a8538a274c7f';
-    const userId = session.data.session?.user.id || devModeId;
+    const { data: { session: currentSession } } = await supabase.auth.getSession();
+    const userId = currentSession?.user.id;
 
     if (userId) {
       const dbUpdates: any = {};

@@ -12,8 +12,11 @@ interface UserProfile {
   active: boolean;
 }
 
+import { Session } from '@supabase/supabase-js';
+
 interface UserContextType {
   user: UserProfile;
+  session: Session | null;
   updateUser: (updates: Partial<UserProfile>) => void;
   resetPhoto: () => void;
   loading: boolean;
@@ -34,23 +37,36 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserProfile>(DEFAULT_USER);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Listen for auth changes to load/reset profile
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
-        await loadProfile(session.user.id);
+    // Initial Session Load
+    const initAuth = async () => {
+      try {
+        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        setSession(initialSession);
+        if (initialSession?.user) {
+          await loadProfile(initialSession.user.id);
+        }
+      } catch (err) {
+        console.error('Initial auth error:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initAuth();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+      setSession(currentSession);
+      if (currentSession?.user) {
+        await loadProfile(currentSession.user.id);
       } else {
         setUser(DEFAULT_USER);
         setLoading(false);
       }
-    });
-
-    // Initial check
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) loadProfile(user.id);
-      else setLoading(false);
     });
 
     return () => subscription.unsubscribe();
@@ -147,7 +163,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <UserContext.Provider value={{ user, updateUser, resetPhoto, loading, isAdmin: user.role === 'admin' }}>
+    <UserContext.Provider value={{ user, session, updateUser, resetPhoto, loading, isAdmin: user.role === 'admin' }}>
       {children}
     </UserContext.Provider>
   );

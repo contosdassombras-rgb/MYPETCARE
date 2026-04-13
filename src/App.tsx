@@ -25,30 +25,23 @@ import { useUser } from './contexts/UserContext';
 
 const AppRoutes: React.FC = () => {
   const { language } = useLanguage();
-  const { user } = useUser();
-  const [session, setSession] = React.useState<Session | null>(null);
-  const [loading, setLoading] = React.useState(true);
+  const { user, session, loading: contextLoading } = useUser();
+  const [safetyLoading, setSafetyLoading] = React.useState(true);
 
+  // Safety Timeout to prevent infinite loading
   React.useEffect(() => {
-    // Pegar sessão inicial
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setLoading(false);
-    });
-
-    // Ouvir mudanças na autenticação
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
-
-    return () => subscription.unsubscribe();
+    const timer = setTimeout(() => {
+      setSafetyLoading(false);
+    }, 4000); // 4 seconds max loading
+    return () => clearTimeout(timer);
   }, []);
 
   usePushNotifications(); 
 
   const isAuthenticated = !!session;
+  const isLoading = contextLoading && safetyLoading;
   
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-surface">
         <Loader2 className="w-10 h-10 animate-spin text-primary opacity-20" />

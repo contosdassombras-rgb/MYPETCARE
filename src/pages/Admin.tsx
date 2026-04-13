@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import * as m from 'motion/react';
+const { motion, AnimatePresence } = m;
 import { 
   Users, UserCheck, UserMinus, DollarSign, Search, 
   Settings as SettingsIcon, Shield, Trash2, CheckCircle, 

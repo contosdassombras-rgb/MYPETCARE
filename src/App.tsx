@@ -25,7 +25,7 @@ import { useUser } from './contexts/UserContext';
 
 const AppRoutes: React.FC = () => {
   const { language } = useLanguage();
-  const { user, session, loading: contextLoading } = useUser();
+  const { user, session, loading: contextLoading, isAdmin } = useUser();
   const [safetyLoading, setSafetyLoading] = React.useState(true);
 
   // Safety Timeout to prevent infinite loading
@@ -75,7 +75,14 @@ const AppRoutes: React.FC = () => {
         <Route 
           path="admin" 
           element={
-            (user && user.role === 'admin') ? <Admin /> : <Navigate to="/" replace />
+            !isAuthenticated ? <Auth /> : 
+            contextLoading ? (
+              <div className="min-h-screen flex flex-col items-center justify-center bg-surface gap-4">
+                <Loader2 className="w-10 h-10 animate-spin text-primary opacity-20" />
+                <p className="text-sm font-bold text-on-surface-variant opacity-50 uppercase tracking-widest">Verificando permissões...</p>
+              </div>
+            ) : 
+            isAdmin ? <Admin /> : <Navigate to="/" replace />
           } 
         />
       </Route>

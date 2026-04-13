@@ -61,6 +61,7 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Escutar mudanças na autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         loadData();
@@ -70,11 +71,13 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     });
 
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      // Bypass ID for development speed/direct access
-      const devModeId = '24b2f3ec-aca9-4eaf-8e36-a8538a274c7f';
-      if (user) loadData();
-      else loadData(); // Load data anyway in bypass mode
+    // Carga inicial
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        loadData();
+      } else {
+        setLoading(false);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -137,10 +140,12 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const addPet = async (pet: Omit<Pet, 'id' | 'events' | 'history'>) => {
-    const session = await supabase.auth.getSession();
-    const devModeId = '24b2f3ec-aca9-4eaf-8e36-a8538a274c7f';
-    const userId = session.data.session?.user.id || devModeId;
-    if (!userId) return;
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user.id;
+    if (!userId) {
+      console.error('No authenticated user found for addPet');
+      return;
+    }
 
     const { data, error } = await supabase
       .from('pets')
@@ -315,9 +320,8 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const localPets: Pet[] = JSON.parse(saved);
       if (!Array.isArray(localPets)) return;
 
-      const session = await supabase.auth.getSession();
-      const devModeId = '24b2f3ec-aca9-4eaf-8e36-a8538a274c7f';
-      const userId = session.data.session?.user.id || devModeId;
+      const { data: { session } } = await supabase.auth.getSession();
+      const userId = session?.user.id;
       if (!userId) return;
 
       for (const pet of localPets) {

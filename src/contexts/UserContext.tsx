@@ -43,14 +43,14 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     let mounted = true;
 
-    const init = async () => {
-      console.log('DEBUG: Auth Initializing...');
+    const initializeAuth = async () => {
+      console.log('DEBUG: UserProvider initializing Auth...');
       try {
         const { data: { session: initialSession } } = await supabase.auth.getSession();
         if (!mounted) return;
         
         setSession(initialSession);
-        console.log('DEBUG: Initial Session:', initialSession?.user.email || 'None');
+        console.log('DEBUG: Initial Session found:', initialSession?.user.email || 'None');
         
         if (initialSession?.user) {
           await loadProfile(initialSession.user.id);
@@ -63,14 +63,15 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     };
 
-    init();
+    initializeAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
-      console.log('DEBUG: Auth Event:', event, currentSession?.user.email);
+      console.log('DEBUG: Auth Change Event:', event, currentSession?.user.email);
       if (!mounted) return;
 
       setSession(currentSession);
       
+      // Only reload profile on explicit login/token change if session exists
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         if (currentSession?.user) {
           await loadProfile(currentSession.user.id);
@@ -81,8 +82,16 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     });
 
+    const safetyTimer = setTimeout(() => {
+      if (mounted && loading) {
+        console.warn('DEBUG: Global Safety Loading Timeout. Forcing release.');
+        setLoading(false);
+      }
+    }, 6000);
+
     return () => {
       mounted = false;
+      clearTimeout(safetyTimer);
       subscription.unsubscribe();
     };
   }, []);

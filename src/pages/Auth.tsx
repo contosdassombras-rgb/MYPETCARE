@@ -3,7 +3,7 @@ import * as m from 'motion/react';
 const { motion, AnimatePresence } = m;
 import { useLanguage } from '../contexts/LanguageContext';
 import { Mail, ArrowRight, PawPrint, CheckCircle2, Loader2, Lock, Eye, EyeOff } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabaseClient';
 import { Button } from '../components/ui/Button';
 
 type AuthMode = 'magic_link' | 'password' | 'signup';

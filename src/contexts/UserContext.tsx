@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabaseClient';
 
 interface UserProfile {
   id?: string;
@@ -85,7 +85,13 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw error;
       }
 
-      if (data) {
+        console.log('DEBUG: Profile loaded from DB:', {
+          id: data.id,
+          email: session?.user.email,
+          role: data.role,
+          active: data.active
+        });
+
         setUser({
           id: data.id,
           name: data.name || DEFAULT_USER.name,

@@ -18,7 +18,7 @@ import { Reports } from './pages/Reports';
 import { Symptoms } from './pages/Symptoms';
 import { Admin } from './pages/Admin';
 import { Auth } from './pages/Auth';
-import { supabase } from './lib/supabase';
+import { supabase } from './lib/supabaseClient';
 import { Session } from '@supabase/supabase-js';
 import { Loader2, ShieldAlert } from 'lucide-react';
 import { useUser } from './contexts/UserContext';
@@ -82,7 +82,14 @@ const AppRoutes: React.FC = () => {
                 <p className="text-sm font-bold text-on-surface-variant opacity-50 uppercase tracking-widest">Verificando permissões...</p>
               </div>
             ) : 
-            isAdmin ? <Admin /> : <Navigate to="/" replace />
+            (() => {
+              console.log('DEBUG: Admin Access Check', {
+                email: session?.user.email,
+                isAdmin: isAdmin,
+                userRole: user.role
+              });
+              return isAdmin ? <Admin /> : <Navigate to="/" replace />;
+            })()
           } 
         />
       </Route>

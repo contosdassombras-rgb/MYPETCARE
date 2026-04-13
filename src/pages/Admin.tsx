@@ -6,7 +6,7 @@ import {
   Settings as SettingsIcon, Shield, Trash2, CheckCircle, 
   XCircle, Filter, ChevronRight, Save, Key, Mail, Plus
 } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabaseClient';
 import { useLanguage } from '../contexts/LanguageContext';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';

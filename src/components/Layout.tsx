@@ -5,6 +5,7 @@ import * as m from 'motion/react';
 const { motion, AnimatePresence } = m;
 import { useLanguage } from '../contexts/LanguageContext';
 import { useUser } from '../contexts/UserContext';
+import { supabase } from '../lib/supabaseClient';
 import { cn } from '../lib/utils';
 import { Button } from './ui/Button';
 

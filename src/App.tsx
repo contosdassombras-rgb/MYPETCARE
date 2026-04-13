@@ -25,6 +25,7 @@ import { useUser } from './contexts/UserContext';
 
 const AppRoutes: React.FC = () => {
   const { language } = useLanguage();
+  const { user } = useUser();
   const [session, setSession] = React.useState<Session | null>(null);
   const [loading, setLoading] = React.useState(true);
 

@@ -281,7 +281,7 @@ export const Admin: React.FC = () => {
                           </div>
                         </td>
                         <td className="px-8 py-6">
-                           <Badge variant={u.role === 'admin' ? 'primary' : 'surface'} className="uppercase text-[9px] px-3 font-black">
+                           <Badge variant={u.role === 'admin' ? 'success' : 'surface'} className="uppercase text-[9px] px-3 font-black">
                              {u.role === 'admin' ? 'Administrador' : 'Usuário'}
                            </Badge>
                         </td>

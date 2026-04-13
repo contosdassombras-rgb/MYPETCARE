@@ -82,7 +82,7 @@ const AppRoutes: React.FC = () => {
         <Route 
           path="admin" 
           element={
-            user.role === 'admin' ? <Admin /> : <Navigate to="/" replace />
+            (user && user.role === 'admin') ? <Admin /> : <Navigate to="/" replace />
           } 
         />
       </Route>

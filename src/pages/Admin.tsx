@@ -114,10 +114,12 @@ export const Admin: React.FC = () => {
     }
   };
 
-  const filteredUsers = users.filter(u => 
-    u.name?.toLowerCase().includes(search.toLowerCase()) || 
-    u.email?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredUsers = users.filter(u => {
+    const searchLower = search.toLowerCase();
+    const nameMatch = (u.name || '').toLowerCase().includes(searchLower);
+    const emailMatch = (u.email || '').toLowerCase().includes(searchLower);
+    return nameMatch || emailMatch;
+  });
 
   const stats = [
     { label: 'Total Usuários', value: users.length, icon: Users, color: 'primary' },
@@ -276,8 +278,8 @@ export const Admin: React.FC = () => {
                               <img src={u.photo_url || 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=100'} alt="" className="w-full h-full object-cover" />
                             </div>
                             <div>
-                              <p className="font-black text-on-surface">{u.name}</p>
-                              <p className="text-xs text-on-surface-variant opacity-60 font-medium">{u.email}</p>
+                              <p className="font-black text-on-surface">{u.name || 'Sem Nome'}</p>
+                              <p className="text-xs text-on-surface-variant opacity-60 font-medium">{u.email || 'Sem E-mail'}</p>
                             </div>
                           </div>
                         </td>

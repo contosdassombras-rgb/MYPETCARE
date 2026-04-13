@@ -48,30 +48,15 @@ const AppRoutes: React.FC = () => {
     return <Auth />;
   }
 
+  // Admin Guard: Proteção de nível superior para a rota /admin
+  if (!isAdmin && window.location.pathname === '/admin') {
+    console.log('DEBUG: Admin Access Denied. Redirecting to home.');
+    return <Navigate to="/" replace />;
+  }
+
   return (
     <Routes>
-      <Route
-        path="/admin"
-        element={
-          !isAuthenticated ? <Navigate to="/" replace /> :
-          contextLoading ? (
-            <div className="min-h-screen flex flex-col items-center justify-center bg-surface gap-4">
-              <Loader2 className="w-10 h-10 animate-spin text-primary opacity-20" />
-              <p className="text-sm font-bold text-on-surface-variant opacity-50 uppercase tracking-widest">Painel Admin: Verificando...</p>
-            </div>
-          ) : 
-          (() => {
-            console.log('DEBUG: Admin Guard deciding...', {
-              isAuthenticated,
-              contextLoading,
-              isAdmin,
-              currentRole: user?.role,
-              sessionEmail: session?.user.email
-            });
-            return isAdmin ? <Admin /> : <Navigate to="/" replace />;
-          })()
-        }
-      />
+      <Route path="/admin" element={<Admin />} />
 
       <Route element={<Layout />}>
         <Route index element={<Dashboard />} />

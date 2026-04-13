@@ -64,11 +64,14 @@ export const Dashboard: React.FC = () => {
 Return only the JSON. No explanation, no markdown, no backticks.`;
   };
 
-  const allEvents = pets
-    .flatMap(p => (p.events || []).map(e => ({ ...e, petName: p.name })))
-    .filter(e => !e.completed)
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    .slice(0, 3);
+  // OTIMIZAÇÃO: Memoizar o cálculo de eventos para evitar re-flatMap pesado em cada render
+  const allEvents = React.useMemo(() => {
+    return pets
+      .flatMap(p => (p.events || []).map(e => ({ ...e, petName: p.name })))
+      .filter(e => !e.completed)
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      .slice(0, 3);
+  }, [pets]);
 
   const formatEventDate = (date: string) => {
     return new Date(`${date}T00:00:00`).toLocaleDateString(undefined, {

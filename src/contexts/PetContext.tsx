@@ -77,17 +77,16 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const loadData = async () => {
     try {
       setLoading(true);
+      
+      // OTIMIZAÇÃO 1: Carregar APENAS pets (sem join pesado)
       const { data: petData, error: petError } = await supabase
         .from('pets')
-        .select(`
-          *,
-          events (*),
-          history_items (*)
-        `)
+        .select('*')
         .order('name');
 
       if (petError) throw petError;
 
+      // OTIMIZAÇÃO 2: Formatar inicialmentes vazios para exibição imediata
       const formattedPets: Pet[] = (petData || []).map(p => ({
         id: p.id,
         name: p.name,
@@ -100,33 +99,66 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         healthConditions: p.health_conditions || '',
         medications: p.medications || '',
         status: p.status,
-        events: (p.events || []).map((e: any) => ({
-          id: e.id,
-          type: e.type,
-          title: e.title,
-          date: e.date,
-          time: e.time,
-          completed: e.completed,
-          notes: e.notes,
-          recurrence: e.recurrence,
-        })),
-        history: (p.history_items || []).map((h: any) => ({
-          id: h.id,
-          type: h.type,
-          title: h.title,
-          date: h.date,
-          notes: h.notes,
-          attachments: h.attachments,
-          attachmentType: h.attachment_type,
-          value: h.value,
-        })),
+        events: [],
+        history: [],
       }));
 
       setPets(formattedPets);
+
+      // OTIMIZAÇÃO 3: Carregar detalhes em paralelo após a lista aparecer
+      if (formattedPets.length > 0) {
+        await loadEventsAndHistoryForAllPets(formattedPets);
+      }
+      
     } catch (err) {
       console.error('Error loading pets:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadEventsAndHistoryForAllPets = async (petsData: Pet[]) => {
+    try {
+      const petIds = petsData.map(p => p.id);
+
+      // Carregar eventos e histórico de uma vez (Batch queries)
+      const [eventsResponse, historyResponse] = await Promise.all([
+        supabase.from('events').select('*').in('pet_id', petIds),
+        supabase.from('history_items').select('*').in('pet_id', petIds)
+      ]);
+
+      const eventsData = eventsResponse.data || [];
+      const historyData = historyResponse.data || [];
+
+      setPets(prev => prev.map(pet => ({
+        ...pet,
+        events: eventsData
+          .filter((e: any) => e.pet_id === pet.id)
+          .map((e: any) => ({
+            id: e.id,
+            type: e.type,
+            title: e.title,
+            date: e.date,
+            time: e.time,
+            completed: e.completed,
+            notes: e.notes,
+            recurrence: e.recurrence,
+          })),
+        history: historyData
+          .filter((h: any) => h.pet_id === pet.id)
+          .map((h: any) => ({
+            id: h.id,
+            type: h.type,
+            title: h.title,
+            date: h.date,
+            notes: h.notes,
+            attachments: h.attachments,
+            attachmentType: h.attachment_type,
+            value: h.value,
+          })),
+      })));
+    } catch (err) {
+      console.error('Error loading sub-items:', err);
     }
   };
 

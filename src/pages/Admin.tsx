@@ -83,11 +83,19 @@ const Admin: React.FC = () => {
         supabase.from('hotmart_events').select('*').order('created_at', { ascending: false })
       ]);
       
-      if (profilesRes.status === 'fulfilled' && !profilesRes.value.error) {
-        setProfiles(profilesRes.value.data || []);
+      if (profilesRes.status === 'fulfilled') {
+        if (profilesRes.value.error) {
+          console.error('Error fetching profiles:', profilesRes.value.error);
+        } else {
+          setProfiles(profilesRes.value.data || []);
+        }
       }
-      if (eventsRes.status === 'fulfilled' && !eventsRes.value.error) {
-        setHotmartEvents(eventsRes.value.data || []);
+      if (eventsRes.status === 'fulfilled') {
+        if (eventsRes.value.error) {
+          console.error('Error fetching events:', eventsRes.value.error);
+        } else {
+          setHotmartEvents(eventsRes.value.data || []);
+        }
       }
     } catch (err) {
       console.error('Error fetching admin data:', err);

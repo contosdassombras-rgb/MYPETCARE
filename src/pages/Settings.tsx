@@ -44,8 +44,8 @@ export const Settings: React.FC = () => {
     }
   };
 
-  const handleTogglePush = () => updateUser({ pushEnabled: !user.pushEnabled });
-  const handleToggleEmail = () => updateUser({ emailEnabled: !user.emailEnabled });
+  const handlePushToggle = () => updateUser({ pushEnabled: !user.pushEnabled });
+  const handleEmailToggle = () => updateUser({ emailEnabled: !user.emailEnabled });
   
   const handleSaveProfile = async () => {
     await updateUser(formData);

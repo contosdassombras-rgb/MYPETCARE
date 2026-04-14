@@ -15,11 +15,15 @@ import { motion, AnimatePresence } from 'motion/react';
 export const Settings: React.FC = () => {
   const { t, language, setLanguage } = useLanguage();
   const { user, signOut, updateUser, resetPhoto } = useUser();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showIOSModal, setShowIOSModal] = useState(false);
   
-  const [activeTab, setActiveTab] = useState<'profile' | 'notifications' | 'app'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'notifications' | 'app'>(() => {
+    const tab = searchParams.get('tab');
+    if (tab === 'notifications' || tab === 'app') return tab;
+    return 'profile';
+  });
   const nameInputRef = useRef<HTMLInputElement>(null);
 
   // Sync activeTab and focus with URL params Reactively

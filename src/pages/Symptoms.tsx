@@ -71,14 +71,13 @@ Return only the JSON. No explanation, no markdown, no backticks.`;
     try {
       let apiKey = import.meta.env.VITE_GROQ_API_KEY;
       
-      // Limpeza de aspas se existirem no .env
       if (apiKey) {
-        apiKey = apiKey.replace(/^["']|["']$/g, '');
+        apiKey = apiKey.replace(/^["']|["']$/g, '').trim();
       }
 
-      console.log('DEBUG: Symptoms - API Key exists:', !!apiKey);
-
-      if (!apiKey) throw new Error('VITE_GROQ_API_KEY not configured');
+      if (!apiKey) {
+        throw new Error('CONFIG_ERROR: VITE_GROQ_API_KEY not found in environment');
+      }
 
       const res = await fetch(GROQ_API_URL, {
         method: 'POST',
@@ -95,20 +94,29 @@ Return only the JSON. No explanation, no markdown, no backticks.`;
       });
 
       if (!res.ok) {
-        const errBody = await res.text();
-        throw new Error(`Groq API error ${res.status}: ${errBody}`);
+        const errData = await res.json().catch(() => ({ error: { message: 'Unknown API error' } }));
+        const errorMessage = errData.error?.message || `HTTP ${res.status}`;
+        throw new Error(`API_ERROR: ${errorMessage}`);
       }
 
       const data = await res.json();
       const text: string = data.choices?.[0]?.message?.content || '';
       const start = text.indexOf('{');
       const end = text.lastIndexOf('}');
-      if (start === -1 || end === -1) throw new Error('Invalid JSON response from AI');
+      if (start === -1 || end === -1) throw new Error('PARSING_ERROR: No JSON object found in AI response');
       const parsed: SymptomResponse = JSON.parse(text.substring(start, end + 1));
       setResponse(parsed);
     } catch (err) {
-      console.error('AI Error:', err);
-      setError('Erro ao obter orientação. Verifique a chave VITE_GROQ_API_KEY e tente novamente.');
+      console.error('AI Guidance Detailed Error:', err);
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      
+      if (msg.includes('CONFIG_ERROR')) {
+        setError('Erro de Configuração: Chave VITE_GROQ_API_KEY não encontrada. Se o site estiver publicado (Vercel/Netlify), você deve adicionar esta chave nas configurações do painel da hospedagem.');
+      } else if (msg.includes('API_ERROR')) {
+        setError(`Erro na API do Groq: ${msg.split('API_ERROR: ')[1]}. Verifique se sua chave ainda é válida.`);
+      } else {
+        setError('Erro ao processar orientação. Tente descrever os sintomas de forma mais simples.');
+      }
     } finally {
       setLoading(false);
     }

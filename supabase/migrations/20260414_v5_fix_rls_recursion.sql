@@ -14,6 +14,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- 2. Atualizar Políticas da tabela PROFILES
 DROP POLICY IF EXISTS "Admins can view all profiles" ON public.profiles;
+DROP POLICY IF EXISTS "Users can view own profile" ON public.profiles;
 DROP POLICY IF EXISTS "Users can view their own profile" ON public.profiles;
 
 -- Política simples: cada um vê o seu
@@ -28,6 +29,7 @@ USING (public.is_admin());
 
 -- 3. Atualizar Políticas da tabela PETS
 DROP POLICY IF EXISTS "Admins can view all pets" ON public.pets;
+DROP POLICY IF EXISTS "Users can view own pets" ON public.pets;
 DROP POLICY IF EXISTS "Users can view their own pets" ON public.pets;
 
 CREATE POLICY "Users can view own pets" 
@@ -40,6 +42,7 @@ USING (public.is_admin());
 
 -- 4. Atualizar Políticas da tabela EVENTS
 DROP POLICY IF EXISTS "Admins can view all events" ON public.events;
+DROP POLICY IF EXISTS "Users can view own events" ON public.events;
 DROP POLICY IF EXISTS "Users can view their own events" ON public.events;
 
 CREATE POLICY "Users can view own events" 

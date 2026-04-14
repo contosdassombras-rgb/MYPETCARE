@@ -22,20 +22,41 @@ export const Auth: React.FC = () => {
     
     setLoading(true);
     try {
-      // Se for AdminMode, usa a senha digitada. 
-      // Se for Tutor (padrão), usa a senha mypetcare@2024 de forma transparente.
+      const normalizedEmail = email.trim().toLowerCase();
       const passToUse = isAdminMode ? password : TUTOR_DEFAULT_PASSWORD;
 
       const { error } = await supabase.auth.signInWithPassword({
-        email: email.trim().toLowerCase(),
+        email: normalizedEmail,
         password: passToUse
       });
 
       if (error) {
+        // Se for tutor e o erro for de credenciais, tentamos sincronizar automaticamente uma vez
+        if (!isAdminMode && (error.message.includes('Invalid login credentials') || error.message.includes('not found'))) {
+          try {
+            const syncRes = await fetch('/api/admin/create-user', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email: normalizedEmail })
+            });
+
+            if (syncRes.ok) {
+              // Tenta logar de novo após a sincronização
+              const { error: retryError } = await supabase.auth.signInWithPassword({
+                email: normalizedEmail,
+                password: passToUse
+              });
+              if (!retryError) return; // Sucesso!
+            }
+          } catch (syncErr) {
+            console.error('Auto-sync failed:', syncErr);
+          }
+        }
+
         if (isAdminMode) {
           throw new Error('E-mail ou senha administrativos incorretos.');
         } else {
-          throw new Error('E-mail não liberado ou senha incorreta. Se o seu acesso for novo, peça ao administrador para "Sincronizar" sua conta no painel.');
+          throw new Error('E-mail não liberado ou senha incorreta. Se você acabou de assinar, aguarde 1 minuto e tente novamente.');
         }
       }
     } catch (err: any) {

@@ -97,13 +97,13 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
     checkInitialSession();
 
-    // 3. Safety timeout para não travar o app
+    // 3. Safety timeout para não travar o app - reduzido para 3s para maior fluidez
     const timeout = setTimeout(() => {
       if (mounted && loading) {
         console.warn('DEBUG: Auth safety timeout reached');
         setLoading(false);
       }
-    }, 6000);
+    }, 3000);
 
     return () => {
       mounted = false;
@@ -140,39 +140,21 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log("DEBUG: Profile Loaded Successfully", {
           id: data.id,
           role: profileData.role,
-          email: session?.user?.email || 'authenticated'
         });
         
         setUser(profileData);
       } else {
-        console.log("DEBUG: Profile not found. Creating default...");
-        const newProfile = {
-          id: userId,
-          name: DEFAULT_USER.name,
-          photo_url: DEFAULT_USER.photo,
-          role: 'user',
-          active: true,
-        };
-
-        const { error: insertError } = await supabase
-          .from('profiles')
-          .insert([newProfile]);
-
-        if (insertError) throw insertError;
-
-        setUser({
-          ...DEFAULT_USER,
-          id: userId,
-        });
+        console.warn("DEBUG: Profile not found. Creating default...");
+        const newProfile = { id: userId, name: DEFAULT_USER.name, photo_url: DEFAULT_USER.photo, role: 'user', active: true };
+        await supabase.from('profiles').insert([newProfile]);
+        setUser({ ...DEFAULT_USER, id: userId });
       }
     } catch (err) {
       console.error('DEBUG: Profile load error:', err);
-      setUser({
-        ...DEFAULT_USER,
-        id: userId,
-      });
+      // Fallback para evitar travamento
+      setUser({ ...DEFAULT_USER, id: userId });
     } finally {
-      setLoading(false);
+      if (mounted) setLoading(false);
     }
   };
 

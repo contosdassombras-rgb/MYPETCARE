@@ -142,16 +142,30 @@ const Admin: React.FC = () => {
   const fetchData = async () => {
     setFetching(true);
     try {
-      const [profilesRes, eventsRes] = await Promise.all([
+      const [profilesRes, eventsRes] = await Promise.allSettled([
         supabase.from('profiles').select('*, pets:pets(count)').order('created_at', { ascending: false }),
         supabase.from('hotmart_events').select('*').order('created_at', { ascending: false })
       ]);
       
-      if (profilesRes.error) throw profilesRes.error;
-      setProfiles(profilesRes.data || []);
-      setHotmartEvents(eventsRes.data || []);
+      let profilesData = [];
+      let eventsData = [];
+
+      if (profilesRes.status === 'fulfilled' && !profilesRes.value.error) {
+        profilesData = profilesRes.value.data || [];
+      } else {
+        console.error("DEBUG: Error fetching profiles:", profilesRes.status === 'fulfilled' ? profilesRes.value.error : profilesRes.reason);
+      }
+
+      if (eventsRes.status === 'fulfilled' && !eventsRes.value.error) {
+        eventsData = eventsRes.value.data || [];
+      } else {
+        console.warn("DEBUG: hotmart_events query failed or table missing. This is normal if integrations are not set up yet.");
+      }
+
+      setProfiles(profilesData);
+      setHotmartEvents(eventsData);
     } catch (err) {
-      console.error('Error fetching admin data:', err);
+      console.error('DEBUG: Unexpected error in Admin fetchData:', err);
     } finally {
       setFetching(false);
     }

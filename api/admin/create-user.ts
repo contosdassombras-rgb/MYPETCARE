@@ -40,9 +40,11 @@ export default async function handler(req: any, res: any) {
 
     const normalizedEmail = email.toLowerCase().trim();
 
-    // 1. Verificar se usuário já existe
-    const { data: getAuthData } = await adminSupabase.auth.admin.getUserByEmail(normalizedEmail);
-    const existingUser = getAuthData?.user;
+    // 1. Verificar se usuário já existe (usando listUsers para maior compatibilidade)
+    const { data: { users: allUsers }, error: listError } = await adminSupabase.auth.admin.listUsers();
+    if (listError) throw listError;
+
+    const existingUser = allUsers.find(u => u.email?.toLowerCase() === normalizedEmail);
 
     if (existingUser) {
       // Se já existe, forçamos a sincronização da senha e perfil

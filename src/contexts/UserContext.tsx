@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import { Session } from '@supabase/supabase-js';
 
 interface UserProfile {
   id?: string;
@@ -11,8 +12,6 @@ interface UserProfile {
   role: 'admin' | 'user';
   active: boolean;
 }
-
-import { Session } from '@supabase/supabase-js';
 
 interface UserContextType {
   user: UserProfile;
@@ -40,21 +39,18 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<UserProfile>(DEFAULT_USER);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const lastLoadedIdRef = React.useRef<string | null>(null);
 
+  const lastLoadedIdRef = React.useRef<string | null>(null);
   const isMounted = React.useRef(true);
 
   useEffect(() => {
     isMounted.current = true;
 
-    // Função única para lidar com mudança de sessão
-    const handleSesssionChange = async (newSession: Session | null, event: string) => {
+    const handleSession = async (currentSession: Session | null) => {
       if (!isMounted.current) return;
-      
-      const userId = newSession?.user?.id;
-      console.log(`DEBUG: Auth Event [${event}] - User: ${userId || 'none'}`);
 
-      // Se não houver usuário, reseta e para
+      const userId = currentSession?.user?.id;
+
       if (!userId) {
         setSession(null);
         setUser(DEFAULT_USER);
@@ -63,127 +59,87 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
-      setSession(newSession);
-
-      // Evita carregar o mesmo perfil várias vezes se o ID for o mesmo
-      // Exceto em eventos explícitos de login ou atualização de token
-      if (lastLoadedIdRef.current === userId && event === 'INITIAL_SESSION') {
-        console.log("DEBUG: Profile already loaded for this ID. Skipping.");
+      // evita loop
+      if (lastLoadedIdRef.current === userId) {
         setLoading(false);
         return;
       }
 
       try {
         setLoading(true);
-        await loadProfile(userId);
+
+        setSession(currentSession);
+
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .maybeSingle();
+
+        if (error && error.code !== 'PGRST116') {
+          throw error;
+        }
+
+        if (data) {
+          console.log("DEBUG ROLE:", data.role);
+
+          setUser({
+            id: data.id,
+            name: data.name || DEFAULT_USER.name,
+            photo: data.photo_url || DEFAULT_USER.photo,
+            phone: data.phone || '',
+            pushEnabled: data.push_enabled || false,
+            emailEnabled: data.email_enabled !== false,
+            role: data.role === 'admin' ? 'admin' : 'user',
+            active: data.active !== false,
+          });
+        } else {
+          setUser({ ...DEFAULT_USER, id: userId });
+        }
+
         lastLoadedIdRef.current = userId;
+
       } catch (err) {
-        console.error("DEBUG: Failed to handle session change:", err);
+        console.error("Erro ao carregar perfil:", err);
+        setUser({ ...DEFAULT_USER, id: userId });
       } finally {
-        if (isMounted.current) setLoading(false);
-      }
-    };
-
-    // 1. Iniciar listener de Auth (que dispara INITIAL_SESSION imediatamente)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
-      await handleSesssionChange(currentSession, event);
-    });
-
-    // 2. Fallback manual apenas se o listener demorar ou falhar
-    const checkInitialSession = async () => {
-      const { data: { session: s } } = await supabase.auth.getSession();
-      if (isMounted.current && !lastLoadedIdRef.current && s?.user?.id) {
-        console.log("DEBUG: Manual session fallback check triggered.");
-        await handleSesssionChange(s, 'MANUAL_CHECK');
-      }
-    };
-    checkInitialSession();
-
-    // 3. Safety timeout para não travar o app - aumentado para 10s para estabilidade
-    const timeout = setTimeout(() => {
-      if (isMounted.current && loading) {
-        console.warn('DEBUG: Auth safety timeout reached');
         setLoading(false);
       }
-    }, 10000);
+    };
+
+    // listener principal
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, currentSession) => {
+        await handleSession(currentSession);
+      }
+    );
+
+    // inicial
+    supabase.auth.getSession().then(({ data }) => {
+      handleSession(data.session);
+    });
 
     return () => {
       isMounted.current = false;
-      clearTimeout(timeout);
-      subscription?.unsubscribe();
+      subscription.unsubscribe();
     };
   }, []);
 
-  const loadProfile = async (userId: string) => {
-    try {
-      console.log("DEBUG: Loading profile for ID:", userId);
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle();
-
-      if (error && error.code !== 'PGRST116') {
-        throw error;
-      }
-
-      if (data) {
-        console.log("DEBUG ROLE:", data.role);
-        
-        const profileData: UserProfile = {
-          id: data.id,
-          name: data.name || DEFAULT_USER.name,
-          photo: data.photo_url || DEFAULT_USER.photo,
-          phone: data.phone || '',
-          pushEnabled: data.push_enabled || false,
-          emailEnabled: data.email_enabled !== false,
-          role: data.role === 'admin' ? 'admin' : 'user',
-          active: data.active !== false,
-        };
-        
-        setUser(profileData);
-      } else {
-        console.warn("DEBUG: Profile not found. Defaulting to user role...");
-        setUser({ ...DEFAULT_USER, id: userId, role: 'user' });
-      }
-    } catch (err) {
-      console.error('DEBUG: Profile load error:', err);
-      // Mantemos o usuário anterior ou default se falhar feio
-      if (!user.id) {
-        setUser({ ...DEFAULT_USER, id: userId });
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const signOut = async () => {
     try {
-      console.log("DEBUG: Executing explicit SignOut...");
-      
-      // 1. Limpeza IMEDIATA do estado local para feedback visual instantâneo
       setSession(null);
       setUser(DEFAULT_USER);
       setLoading(false);
 
-      // 2. Limpeza agressiva do localStorage antes de tentar a rede
       Object.keys(localStorage).forEach(key => {
-        if (key.includes('supabase.auth.token') || key.includes('sb-')) {
+        if (key.includes('supabase') || key.includes('sb-')) {
           localStorage.removeItem(key);
         }
       });
 
-      // 3. Tentar deslogar do servidor (sem bloquear a UI)
-      await supabase.auth.signOut().catch(err => {
-        console.warn("DEBUG: Remote SignOut failed, but local cleared:", err);
-      });
-
-      console.log("DEBUG: SignOut complete.");
+      await supabase.auth.signOut().catch(() => {});
     } catch (err) {
-      console.error("DEBUG: Fatal error during SignOut:", err);
-    } finally {
-      // Garantia final de que o app não ficará em loading
-      setLoading(false);
+      console.error(err);
     }
   };
 
@@ -196,23 +152,22 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (userId) {
         const dbUpdates: any = {};
-        if (updates.name !== undefined) dbUpdates.name = updates.name || null;
-        if (updates.photo !== undefined) dbUpdates.photo_url = updates.photo || null;
-        if (updates.phone !== undefined) dbUpdates.phone = updates.phone || '';
+
+        if (updates.name !== undefined) dbUpdates.name = updates.name;
+        if (updates.photo !== undefined) dbUpdates.photo_url = updates.photo;
+        if (updates.phone !== undefined) dbUpdates.phone = updates.phone;
         if (updates.pushEnabled !== undefined) dbUpdates.push_enabled = updates.pushEnabled;
         if (updates.emailEnabled !== undefined) dbUpdates.email_enabled = updates.emailEnabled;
         if (updates.role !== undefined) dbUpdates.role = updates.role;
         if (updates.active !== undefined) dbUpdates.active = updates.active;
 
-        const { error } = await supabase
+        await supabase
           .from('profiles')
           .update(dbUpdates)
           .eq('id', userId);
-
-        if (error) console.error('Update error:', error);
       }
     } catch (err) {
-      console.error('Update error:', err);
+      console.error(err);
     }
   };
 

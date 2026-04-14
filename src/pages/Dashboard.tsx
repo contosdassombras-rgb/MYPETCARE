@@ -99,6 +99,8 @@ Return only the JSON. No explanation, no markdown, no backticks.`;
     }
   };
 
+  const isProfileIncomplete = user.name === 'Tutor MyPetCare' || !user.phone;
+
   return (
     <div className="max-w-7xl mx-auto">
       {hasLocalData && (
@@ -123,6 +125,37 @@ Return only the JSON. No explanation, no markdown, no backticks.`;
           >
             Sincronizar Agora
           </Button>
+        </motion.div>
+      )}
+
+      {isProfileIncomplete && (
+        <motion.div
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          className="mb-12 p-8 bg-gradient-to-br from-primary via-primary to-primary-container text-on-primary rounded-[3rem] shadow-2xl shadow-primary/20 relative overflow-hidden group"
+        >
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32 blur-3xl transition-transform group-hover:scale-110 duration-700" />
+          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+            <div className="flex items-center gap-6">
+              <div className="w-16 h-16 bg-white/20 rounded-3xl flex items-center justify-center backdrop-blur-xl">
+                <User className="w-8 h-8 text-white" />
+              </div>
+              <div className="space-y-1">
+                <h4 className="text-2xl font-black tracking-tighter leading-tight">
+                  {t('complete_profile_title')}
+                </h4>
+                <p className="text-sm font-medium opacity-80 max-w-md">
+                  {t('complete_profile_desc')}
+                </p>
+              </div>
+            </div>
+            <Button 
+              onClick={() => navigate('/settings?tab=profile')}
+              className="w-full md:w-auto px-10 py-6 bg-white text-primary hover:bg-white/90 rounded-2xl font-black tracking-tighter shadow-lg"
+            >
+              {t('complete_profile_cta')}
+            </Button>
+          </div>
         </motion.div>
       )}
 

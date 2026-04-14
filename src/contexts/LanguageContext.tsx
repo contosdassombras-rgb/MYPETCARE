@@ -211,6 +211,17 @@ const translations: Record<Language, Record<string, string>> = {
     no_weight_data: 'Sem registros de peso',
     recommend_to_community: 'Recomendar à Comunidade',
     share_with_tutors: 'Compartilhe este local com outros tutores',
+    complete_profile_title: 'Complete seu perfil de tutor',
+    complete_profile_desc: 'Adicione seu nome e WhatsApp para facilitar o contato com profissionais e compartilhamento de relatórios.',
+    complete_profile_cta: 'Completar Perfil',
+    install_instructions_ios_title: 'Instalar no seu iPhone',
+    install_instructions_ios_desc: 'Siga estes passos simples para adicionar o MyPetCare à sua tela de início:',
+    install_instructions_ios_step1: 'Abra este site no navegador Safari.',
+    install_instructions_ios_step2: 'Toque no ícone de Compartilhar (o quadrado com uma seta para cima na barra inferior).',
+    install_instructions_ios_step3: 'Role para baixo e selecione "Adicionar à Tela de Início".',
+    install_instructions_ios_step4: 'Clique em "Adicionar" no canto superior direito.',
+    install_instructions_android_title: 'Instalar MyPetCare',
+    install_instructions_android_desc: 'Adicione este app à sua tela inicial para acesso rápido e notificações em tempo real.'
   },
   en: {
     welcome_back: 'Welcome back',
@@ -414,6 +425,17 @@ const translations: Record<Language, Record<string, string>> = {
     no_weight_data: 'No weight records',
     recommend_to_community: 'Recommend to Community',
     share_with_tutors: 'Share this place with other tutors',
+    complete_profile_title: 'Complete your tutor profile',
+    complete_profile_desc: 'Add your name and WhatsApp to facilitate contact with professionals and share reports.',
+    complete_profile_cta: 'Complete Profile',
+    install_instructions_ios_title: 'Install on your iPhone',
+    install_instructions_ios_desc: 'Follow these simple steps to add MyPetCare to your home screen:',
+    install_instructions_ios_step1: 'Open this site in the Safari browser.',
+    install_instructions_ios_step2: 'Tap the Share icon (the square with an upward arrow in the bottom bar).',
+    install_instructions_ios_step3: 'Scroll down and select "Add to Home Screen".',
+    install_instructions_ios_step4: 'Click "Add" in the top right corner.',
+    install_instructions_android_title: 'Install MyPetCare',
+    install_instructions_android_desc: 'Add this app to your home screen for fast access and real-time notifications.'
   },
   es: {
     welcome_back: 'Bienvenido de nuevo',
@@ -617,6 +639,17 @@ const translations: Record<Language, Record<string, string>> = {
     no_weight_data: 'Sin registros de peso',
     recommend_to_community: 'Recomendar a la Comunidad',
     share_with_tutors: 'Comparte este lugar con otros tutores',
+    complete_profile_title: 'Completa tu perfil de tutor',
+    complete_profile_desc: 'Añade tu nombre e WhatsApp para facilitar el contacto con profesionales y compartir informes.',
+    complete_profile_cta: 'Completar Perfil',
+    install_instructions_ios_title: 'Instalar en tu iPhone',
+    install_instructions_ios_desc: 'Sigue estos sencillos pasos para añadir MyPetCare a tu pantalla de inicio:',
+    install_instructions_ios_step1: 'Abre este sitio en el navegador Safari.',
+    install_instructions_ios_step2: 'Toca el icono de Compartir (el cuadrado con una flecha hacia arriba en la barra inferior).',
+    install_instructions_ios_step3: 'Desliza hacia abajo y selecciona "Añadir a la pantalla de inicio".',
+    install_instructions_ios_step4: 'Haz clic en "Añadir" en la esquina superior derecha.',
+    install_instructions_android_title: 'Instalar MyPetCare',
+    install_instructions_android_desc: 'Añade esta app a tu pantalla de inicio para acceso rápido y notificaciones en tiempo real.'
   },
 };
 

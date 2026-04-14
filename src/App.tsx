@@ -83,6 +83,16 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 const AppRoutes: React.FC = () => {
   const { session, loading: contextLoading } = useUser();
   const { language } = useLanguage();
+
+  // Handle PWA Installation prompting
+  React.useEffect(() => {
+    const handler = (e: any) => {
+      e.preventDefault();
+      (window as any).__pwaInstallPrompt = e;
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
   
   // Push notifications — fully auth-gated and non-blocking inside the hook
   usePushNotifications();

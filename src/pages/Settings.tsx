@@ -5,17 +5,19 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Globe, Bell, Shield, LogOut, ChevronRight, 
   Download, Mail, Smartphone, HelpCircle, 
-  Camera, Trash2, User, Phone
+  Camera, Trash2, User, Phone, Share, PlusSquare, X
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
-import { Input } from '../components/ui/Input';
+import { motion, AnimatePresence } from 'motion/react';
 
 export const Settings: React.FC = () => {
   const { t, language, setLanguage } = useLanguage();
   const { user, signOut, updateUser, resetPhoto } = useUser();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showIOSModal, setShowIOSModal] = useState(false);
+  
   const [activeTab, setActiveTab] = useState<'profile' | 'notifications'>(() => {
     const params = new URLSearchParams(window.location.search);
     return (params.get('tab') as 'profile' | 'notifications') || 'profile';
@@ -57,11 +59,17 @@ export const Settings: React.FC = () => {
   };
 
   const handleInstallPWA = () => {
-    const promptEvent = (window as any).__pwaInstallPrompt;
-    if (promptEvent) {
-      promptEvent.prompt();
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+    
+    if (isIOS) {
+      setShowIOSModal(true);
     } else {
-      alert(t('install_mypetcare'));
+      const promptEvent = (window as any).__pwaInstallPrompt;
+      if (promptEvent) {
+        promptEvent.prompt();
+      } else {
+        alert(t('install_instructions_android_desc'));
+      }
     }
   };
 
@@ -174,7 +182,7 @@ export const Settings: React.FC = () => {
                 onClick={handleSaveProfile}
                 className="w-full py-6 rounded-2xl text-lg font-black tracking-tighter shadow-xl shadow-primary/20 mt-4"
               >
-                {t('save_changes')}
+                {t('save')}
               </Button>
             </div>
           </Card>
@@ -274,9 +282,87 @@ export const Settings: React.FC = () => {
         </section>
       </div>
 
+      {/* iOS Install Instruction Modal */}
+      <AnimatePresence>
+        {showIOSModal && (
+          <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowIOSModal(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ y: 100, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 100, opacity: 0 }}
+              className="relative w-full max-w-lg bg-surface rounded-[2.5rem] p-8 space-y-8 overflow-hidden"
+            >
+              <button 
+                onClick={() => setShowIOSModal(false)}
+                className="absolute top-6 right-6 p-2 rounded-full bg-surface-container-low hover:bg-surface-container-high"
+              >
+                <X className="w-6 h-6" />
+              </button>
+
+              <div className="text-center space-y-2">
+                <div className="w-20 h-20 bg-primary/10 text-primary rounded-[2rem] flex items-center justify-center mx-auto mb-6">
+                  <Download className="w-10 h-10" />
+                </div>
+                <h3 className="text-3xl font-black tracking-tighter">
+                  {t('install_instructions_ios_title')}
+                </h3>
+                <p className="text-on-surface-variant font-medium opacity-60">
+                  {t('install_instructions_ios_desc')}
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-start gap-4 p-4 bg-surface-container-low rounded-2xl">
+                  <div className="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center font-black text-sm shrink-0">1</div>
+                  <p className="text-sm font-bold">{t('install_instructions_ios_step1')}</p>
+                </div>
+                <div className="flex items-start gap-4 p-4 bg-surface-container-low rounded-2xl">
+                  <div className="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center font-black text-sm shrink-0">2</div>
+                  <div className="flex-1">
+                    <p className="text-sm font-bold flex items-center gap-2">
+                      {t('install_instructions_ios_step2')}
+                      <span className="p-1 px-2 bg-white/50 rounded flex items-center gap-1">
+                        <Share className="w-4 h-4" />
+                      </span>
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-4 p-4 bg-surface-container-low rounded-2xl">
+                  <div className="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center font-black text-sm shrink-0">3</div>
+                  <div className="flex-1">
+                    <p className="text-sm font-bold flex items-center gap-2">
+                      {t('install_instructions_ios_step3')}
+                      <span className="p-1 px-2 bg-white/50 rounded flex items-center gap-1">
+                        <PlusSquare className="w-4 h-4" />
+                      </span>
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-4 p-4 bg-surface-container-low rounded-2xl">
+                  <div className="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center font-black text-sm shrink-0">4</div>
+                  <p className="text-sm font-bold">{t('install_instructions_ios_step4')}</p>
+                </div>
+              </div>
+
+              <Button onClick={() => setShowIOSModal(false)} className="w-full py-6 rounded-2xl font-black text-lg">
+                Entendido
+              </Button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       <div className="mt-20 text-center">
         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant opacity-20">MyPetCare v1.0.0 PREMIUM</p>
       </div>
     </div>
   );
 };
+

@@ -3,8 +3,9 @@ import * as m from 'motion/react';
 const { motion, AnimatePresence } = m;
 import { useLanguage } from '../contexts/LanguageContext';
 import { usePets } from '../contexts/PetContext';
+import { useUser } from '../contexts/UserContext';
 import { useNavigate } from 'react-router-dom';
-import { Heart, Plus, ChevronRight, Stethoscope, FileBarChart, Users, Thermometer, Clock, Trash2 } from 'lucide-react';
+import { Heart, Plus, ChevronRight, Stethoscope, FileBarChart, Users, Thermometer, Clock, Trash2, User } from 'lucide-react';
 import { cn, calculateAge } from '../lib/utils';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
@@ -13,6 +14,7 @@ import { Badge } from '../components/ui/Badge';
 
 export const Dashboard: React.FC = () => {
   const { t } = useLanguage();
+  const { user } = useUser();
   const { pets, loading, syncLocalData, deletePet } = usePets();
   const navigate = useNavigate();
   const [syncing, setSyncing] = React.useState(false);
@@ -28,6 +30,42 @@ export const Dashboard: React.FC = () => {
       console.error('Manual sync error:', err);
     } finally {
       setSyncing(false);
+    }
+  };
+
+  // OTIMIZAÇÃO: Memoizar o cálculo de eventos para evitar re-flatMap pesado em cada render
+  const allEvents = React.useMemo(() => {
+    try {
+      if (loading) return []; // Retornar vazio se ainda estiver carregando
+      return pets
+        .flatMap(p => (p.events || []).map(e => ({ ...e, petName: p.name })))
+        .filter(e => {
+          if (!e.date || e.completed) return false;
+          const d = new Date(`${e.date}T00:00:00`);
+          return !isNaN(d.getTime());
+        })
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+        .slice(0, 3);
+    } catch (err) {
+      console.warn('DEBUG: Error calculating allEvents:', err);
+      return [];
+    }
+  }, [pets, loading]);
+
+  const formatEventDate = (date: string) => {
+    try {
+      if (!date) return '---';
+      const d = new Date(`${date}T00:00:00`);
+      if (isNaN(d.getTime())) return '---';
+      
+      return d.toLocaleDateString(undefined, {
+        weekday: 'long',
+        day: '2-digit',
+        month: 'short',
+      });
+    } catch (err) {
+      console.warn('DEBUG: Error formatting date:', date, err);
+      return '---';
     }
   };
 
@@ -62,41 +100,6 @@ export const Dashboard: React.FC = () => {
    - recommendation: string
 
 Return only the JSON. No explanation, no markdown, no backticks.`;
-  };
-
-  // OTIMIZAÇÃO: Memoizar o cálculo de eventos para evitar re-flatMap pesado em cada render
-  const allEvents = React.useMemo(() => {
-    try {
-      return pets
-        .flatMap(p => (p.events || []).map(e => ({ ...e, petName: p.name })))
-        .filter(e => {
-          if (!e.date || e.completed) return false;
-          const d = new Date(`${e.date}T00:00:00`);
-          return !isNaN(d.getTime());
-        })
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-        .slice(0, 3);
-    } catch (err) {
-      console.warn('DEBUG: Error calculating allEvents:', err);
-      return [];
-    }
-  }, [pets]);
-
-  const formatEventDate = (date: string) => {
-    try {
-      if (!date) return '---';
-      const d = new Date(`${date}T00:00:00`);
-      if (isNaN(d.getTime())) return '---';
-      
-      return d.toLocaleDateString(undefined, {
-        weekday: 'long',
-        day: '2-digit',
-        month: 'short',
-      });
-    } catch (err) {
-      console.warn('DEBUG: Error formatting date:', date, err);
-      return '---';
-    }
   };
 
   const isProfileIncomplete = user.name === 'Tutor MyPetCare' || !user.phone;

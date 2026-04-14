@@ -221,10 +221,10 @@ const Admin: React.FC = () => {
 
   // --- CÁLCULOS DE KPI ---
   const stats = useMemo(() => {
-    const total = profiles.length;
-    const active = profiles.filter(p => p.active !== false).length;
-    const canceled = profiles.filter(p => p.active === false).length;
-    const neverAccessed = profiles.filter(p => !p.last_login_at && p.active !== false).length;
+    const total = (profiles || []).length;
+    const active = (profiles || []).filter(p => p.active !== false).length;
+    const canceled = (profiles || []).filter(p => p.active === false).length;
+    const neverAccessed = (profiles || []).filter(p => !p.last_login_at && p.active !== false).length;
     const cartAbandonment = (hotmartEvents || []).filter(e => (e.event_type || '').includes('ABANDONMENT')).length;
     const waitingPayment = (hotmartEvents || []).filter(e => (e.event_type || '').includes('WAITING')).length;
     const totalRevenue = (hotmartEvents || []).reduce((acc, curr) => acc + (curr.price_value || 0), 0);

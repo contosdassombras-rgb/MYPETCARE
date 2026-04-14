@@ -79,6 +79,11 @@ export const Professionals: React.FC = () => {
     rating: 5, comment: ''
   });
 
+  // Filters for recommendations
+  const [filterType, setFilterType] = useState<string>('all');
+  const [filterRating, setFilterRating] = useState<number>(0);
+  const [filterCity, setFilterCity] = useState<string>('');
+
   const getDevModeId = () => '24b2f3ec-aca9-4eaf-8e36-a8538a274c7f';
 
   const fetchRecommendations = useCallback(async () => {
@@ -204,11 +209,10 @@ export const Professionals: React.FC = () => {
     }
   };
 
+  // Auto-search removed as per user request. Use manual search button.
   useEffect(() => {
-    if (activeTab === 'clinics' && clinics.length === 0 && !loading && !citySearch) {
-      handleGeolocation();
-    }
-  }, [activeTab, clinics.length, handleGeolocation, loading, citySearch]);
+    // If we have no data and it's the first time visiting 'clinics', we can show a placeholder or just wait for user action.
+  }, [activeTab]);
 
   const handleCreateProfessional = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -417,75 +421,131 @@ export const Professionals: React.FC = () => {
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 px-2">
-            {loadingRecommendations && (
-              <div className="col-span-full text-center py-32">
-                <Loader2 className="w-12 h-12 animate-spin text-primary opacity-20 mx-auto mb-4" />
-                <p className="text-on-surface-variant font-black uppercase tracking-widest opacity-40">Carregando Recomendações...</p>
-              </div>
-            )}
+          {/* Filter Bar for Recommendations */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 px-4 mb-12">
+            <select 
+              value={filterType}
+              onChange={e => setFilterType(e.target.value)}
+              className="bg-surface-container-low border-none rounded-2xl px-6 py-4 font-bold outline-none appearance-none"
+            >
+              <option value="all">{t('all_types')}</option>
+              <option value="veterinarian">{t('veterinarian')}</option>
+              <option value="clinic">{t('clinic')}</option>
+              <option value="pet_shop">{t('pet_shop')}</option>
+            </select>
 
-            {!loadingRecommendations && professionals.length === 0 ? (
-              <div className="col-span-full text-center py-32 bg-surface-container-low/20 rounded-[3rem] border-2 border-dashed border-surface-container-high/50">
-                <p className="text-on-surface-variant font-black uppercase tracking-widest opacity-40">{t('no_recommendations')}</p>
-              </div>
-            ) : (
-              !loadingRecommendations && professionals.map(pro => (
-                <motion.div 
-                  key={pro.id} 
-                  initial={{ opacity: 0, scale: 0.95 }} 
-                  animate={{ opacity: 1, scale: 1 }}
-                  onClick={() => setSelectedProfessional(pro)}
-                >
-                  <Card className="p-10 rounded-[2.5rem] bg-surface-container-lowest shadow-xl border-none relative overflow-hidden group h-full flex flex-col cursor-pointer hover:bg-surface-container-low transition-colors">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-bl-[5rem] -mr-8 -mt-8 transition-transform group-hover:scale-110" />
-                    
-                    <div className="flex justify-between items-start mb-8 relative z-10">
-                      <div className="flex gap-5">
-                        <div className="w-16 h-16 bg-primary-container text-primary rounded-2xl flex items-center justify-center shadow-inner">
-                          <User className="w-8 h-8" />
-                        </div>
-                        <div>
-                          <h3 className="text-xl font-black text-on-surface mb-1">{pro.name}</h3>
-                          <Badge variant="surface" className="px-3 py-1 scale-90 -ml-1 text-[10px]">{t(pro.type) || pro.type}</Badge>
-                        </div>
-                      </div>
-                      <div className="flex flex-col items-end gap-1">
-                        <div className="flex items-center gap-1.5 text-secondary font-black bg-secondary/10 px-4 py-2 rounded-2xl">
-                          <Star className={cn("w-5 h-5", pro.average_rating ? "fill-current" : "opacity-20")} />
-                          {pro.average_rating ? pro.average_rating.toFixed(1) : 'S/N'}
-                        </div>
-                        <span className="text-[10px] font-black opacity-30 uppercase">{pro.total_ratings} {t('ratings')}</span>
-                      </div>
-                    </div>
+            <select 
+              value={filterRating}
+              onChange={e => setFilterRating(Number(e.target.value))}
+              className="bg-surface-container-low border-none rounded-2xl px-6 py-4 font-bold outline-none appearance-none"
+            >
+              <option value={0}>{t('all_stars')}</option>
+              <option value={5}>5 ★</option>
+              <option value={4}>4+ ★</option>
+              <option value={3}>3+ ★</option>
+            </select>
 
-                    <div className="relative mb-8 flex-grow">
-                      <MessageSquare className="w-12 h-12 text-primary opacity-5 absolute -top-4 -left-4" />
-                      <div className="text-on-surface-variant font-medium leading-relaxed text-lg relative z-10 pl-6 border-l-2 border-primary/20">
-                        {pro.ratings && pro.ratings.length > 0 ? (
-                          <p className="italic">"{pro.ratings[0].comment}"</p>
-                        ) : (
-                          <p className="opacity-30">Ainda não há avaliações. Seja o primeiro!</p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center pt-8 border-t border-surface-container-high/20 mt-auto">
-                      <div className="flex items-center justify-between w-full">
-                        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-on-surface-variant opacity-40">
-                          <MapPin className="w-4 h-4 text-primary" />
-                          {pro.city}{pro.state ? `, ${pro.state}` : ''}
-                        </div>
-                        <Button variant="ghost" size="sm" className="font-black text-[10px] uppercase opacity-60">
-                          Avaliar Socialmente
-                        </Button>
-                      </div>
-                    </div>
-                  </Card>
-                </motion.div>
-              ))
-            )}
+            <div className="relative">
+              <MapPin className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-primary opacity-40" />
+              <input 
+                type="text"
+                placeholder={t('filter_by_location')}
+                value={filterCity}
+                onChange={e => setFilterCity(e.target.value)}
+                className="w-full bg-surface-container-low border-none rounded-2xl pl-14 pr-6 py-4 font-bold outline-none"
+              />
+            </div>
           </div>
+
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 px-2">
+    {loadingRecommendations && (
+      <div className="col-span-full text-center py-32">
+        <Loader2 className="w-12 h-12 animate-spin text-primary opacity-20 mx-auto mb-4" />
+        <p className="text-on-surface-variant font-black uppercase tracking-widest opacity-40">Carregando Recomendações...</p>
+      </div>
+    )}
+
+    {!loadingRecommendations && professionals.filter(pro => {
+      const typeMatch = filterType === 'all' || pro.type === filterType;
+      const ratingMatch = filterRating === 0 || (pro.average_rating || 0) >= filterRating;
+      const locationMatch = !filterCity || 
+        pro.city?.toLowerCase().includes(filterCity.toLowerCase()) || 
+        pro.state?.toLowerCase().includes(filterCity.toLowerCase());
+      return typeMatch && ratingMatch && locationMatch;
+    }).length === 0 ? (
+      <div className="col-span-full text-center py-32 bg-surface-container-low/20 rounded-[3rem] border-2 border-dashed border-surface-container-high/50 px-8">
+        <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center mx-auto mb-6 text-primary">
+          <Star className="w-10 h-10" />
+        </div>
+        <p className="text-on-surface-variant font-black uppercase tracking-widest opacity-40 max-w-sm mx-auto">
+          {t('be_the_first_to_recommend')}
+        </p>
+      </div>
+    ) : (
+      !loadingRecommendations && professionals.filter(pro => {
+        const typeMatch = filterType === 'all' || pro.type === filterType;
+        const ratingMatch = filterRating === 0 || (pro.average_rating || 0) >= filterRating;
+        const locationMatch = !filterCity || 
+          pro.city?.toLowerCase().includes(filterCity.toLowerCase()) || 
+          pro.state?.toLowerCase().includes(filterCity.toLowerCase());
+        return typeMatch && ratingMatch && locationMatch;
+      }).map(pro => (
+        <motion.div 
+          key={pro.id} 
+          initial={{ opacity: 0, scale: 0.95 }} 
+          animate={{ opacity: 1, scale: 1 }}
+          onClick={() => setSelectedProfessional(pro)}
+        >
+          <Card className="p-10 rounded-[2.5rem] bg-surface-container-lowest shadow-xl border-none relative overflow-hidden group h-full flex flex-col cursor-pointer hover:bg-surface-container-low transition-colors">
+            {/* card content... same as before but inside the filtered map */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-bl-[5rem] -mr-8 -mt-8 transition-transform group-hover:scale-110" />
+            
+            <div className="flex justify-between items-start mb-8 relative z-10">
+              <div className="flex gap-5">
+                <div className="w-16 h-16 bg-primary-container text-primary rounded-2xl flex items-center justify-center shadow-inner">
+                  <User className="w-8 h-8" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-on-surface mb-1">{pro.name}</h3>
+                  <Badge variant="surface" className="px-3 py-1 scale-90 -ml-1 text-[10px]">{t(pro.type) || pro.type}</Badge>
+                </div>
+              </div>
+              <div className="flex flex-col items-end gap-1">
+                <div className="flex items-center gap-1.5 text-secondary font-black bg-secondary/10 px-4 py-2 rounded-2xl">
+                  <Star className={cn("w-5 h-5", pro.average_rating ? "fill-current" : "opacity-20")} />
+                  {pro.average_rating ? pro.average_rating.toFixed(1) : 'S/N'}
+                </div>
+                <span className="text-[10px] font-black opacity-30 uppercase">{pro.total_ratings} {t('ratings')}</span>
+              </div>
+            </div>
+
+            <div className="relative mb-8 flex-grow">
+              <MessageSquare className="w-12 h-12 text-primary opacity-5 absolute -top-4 -left-4" />
+              <div className="text-on-surface-variant font-medium leading-relaxed text-lg relative z-10 pl-6 border-l-2 border-primary/20">
+                {pro.ratings && pro.ratings.length > 0 ? (
+                  <p className="italic">"{pro.ratings[0].comment}"</p>
+                ) : (
+                  <p className="opacity-30">Ainda não há avaliações. Seja o primeiro!</p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center pt-8 border-t border-surface-container-high/20 mt-auto">
+              <div className="flex items-center justify-between w-full">
+                <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-on-surface-variant opacity-40">
+                  <MapPin className="w-4 h-4 text-primary" />
+                  {pro.city}{pro.state ? `, ${pro.state}` : ''}
+                </div>
+                <Button variant="ghost" size="sm" className="font-black text-[10px] uppercase opacity-60">
+                  Avaliar Socialmente
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </motion.div>
+      ))
+    )}
+  </div>
         </div>
       )}
 

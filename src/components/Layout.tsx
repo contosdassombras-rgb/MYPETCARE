@@ -24,9 +24,7 @@ export const Layout: React.FC = () => {
     { icon: User, label: t('profile'), path: '/profile' },
   ];
 
-  if (isAdmin) {
-    navItems.splice(3, 0, { icon: Shield, label: 'Admin', path: '/admin' });
-  }
+
 
   return (
     <div className="min-h-screen flex bg-surface">

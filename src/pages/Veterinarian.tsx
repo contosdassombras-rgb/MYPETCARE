@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Phone, Mail, User, Plus, X, Trash2, Building2, ShoppingBag, Globe, MapPin } from 'lucide-react';
+import { Phone, Mail, User, Plus, X, Trash2, Building2, ShoppingBag, Globe, MapPin, Star } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { supabase } from '../lib/supabaseClient';
 
@@ -41,6 +41,7 @@ export const Veterinarian: React.FC = () => {
   });
 
   const [isAdding, setIsAdding] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [recommendToSocial, setRecommendToSocial] = useState(false);
   const [newContact, setNewContact] = useState<Omit<Contact, 'id'>>({
     name: '',
@@ -60,31 +61,21 @@ export const Veterinarian: React.FC = () => {
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    const contact: Contact = { ...newContact, id: generateId() };
-    saveContacts([...contacts, contact]);
+    if (editingId) {
+      const updated = contacts.map(c => c.id === editingId ? { ...newContact, id: editingId } : c);
+      saveContacts(updated);
+    } else {
+      const contact: Contact = { ...newContact, id: generateId() };
+      saveContacts([...contacts, contact]);
+    }
 
-    if (recommendToSocial) {
-      try {
-        const session = await supabase.auth.getSession();
-        const devModeId = '24b2f3ec-aca9-4eaf-8e36-a8538a274c7f';
-        const userId = session.data.session?.user.id || devModeId;
-
-        await supabase.from('professionals').insert({
-          name: newContact.name,
-          type: newContact.type,
-          city: newContact.city,
-          state: newContact.state,
-          created_by: userId
-        });
-        
-        navigate('/professionals');
-        return;
-      } catch (err) {
-        console.error('Social recommendation error:', err);
-      }
+    if (recommendToSocial && !editingId) {
+      // Social Logic already handled if not editing
+      // (Optional: handle sync on edit too?)
     }
 
     setIsAdding(false);
+    setEditingId(null);
     setNewContact({ name: '', phone: '', whatsapp: '', email: '', type: 'veterinarian', city: '', state: '' });
     setRecommendToSocial(false);
   };
@@ -101,6 +92,42 @@ export const Veterinarian: React.FC = () => {
       case 'clinic': return Building2;
       case 'pet_shop': return ShoppingBag;
       default: return User;
+    }
+  };
+
+  const handleEdit = (contact: Contact) => {
+    setNewContact({
+      name: contact.name,
+      phone: contact.phone,
+      whatsapp: contact.whatsapp || '',
+      email: contact.email || '',
+      type: contact.type,
+      city: contact.city || '',
+      state: contact.state || ''
+    });
+    setEditingId(contact.id);
+    setIsAdding(true);
+  };
+
+  const handleStarRecommend = async (contact: Contact) => {
+    try {
+      const session = await supabase.auth.getSession();
+      const devModeId = '24b2f3ec-aca9-4eaf-8e36-a8538a274c7f';
+      const userId = session.data.session?.user.id || devModeId;
+
+      const { error } = await supabase.from('professionals').insert({
+        name: contact.name,
+        type: contact.type,
+        city: contact.city,
+        state: contact.state,
+        created_by: userId
+      });
+      
+      if (error) throw error;
+      alert(t('recommend_to_community_success'));
+    } catch (err) {
+      console.error('Social recommendation error:', err);
+      alert('Erro ao recomendar.');
     }
   };
 
@@ -129,12 +156,29 @@ export const Veterinarian: React.FC = () => {
               animate={{ opacity: 1, scale: 1 }}
               className="bg-surface-container-lowest p-6 rounded-3xl shadow-sm border border-surface-container-high/30 group relative"
             >
-              <button
-                onClick={() => handleDelete(contact.id)}
-                className="absolute top-4 right-4 p-2 text-error opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                <Trash2 className="w-5 h-5" />
-              </button>
+              <div className="absolute top-4 right-4 flex gap-2">
+                <button
+                  onClick={() => handleStarRecommend(contact)}
+                  className="p-2 text-primary hover:bg-primary/10 rounded-full transition-colors"
+                  title="Recomendar à Comunidade"
+                >
+                  <Star className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={() => handleEdit(contact)}
+                  className="p-2 text-on-surface-variant hover:bg-surface-container-low rounded-full transition-colors"
+                  title={t('edit')}
+                >
+                  <Plus className="w-5 h-5 rotate-45" /> 
+                </button>
+                <button
+                  onClick={() => handleDelete(contact.id)}
+                  className="p-2 text-error hover:bg-error/10 rounded-full transition-colors"
+                  title={t('delete')}
+                >
+                  <Trash2 className="w-5 h-5" />
+                </button>
+              </div>
 
               <div className="flex items-center gap-4 mb-6">
                 <div className="w-14 h-14 bg-primary-container text-primary rounded-2xl flex items-center justify-center">
@@ -296,34 +340,36 @@ export const Veterinarian: React.FC = () => {
                   </div>
                 </div>
 
-                <div 
-                  onClick={() => setRecommendToSocial(!recommendToSocial)}
-                  className={cn(
-                    "p-6 rounded-3xl border-2 transition-all cursor-pointer flex items-center justify-between",
-                    recommendToSocial 
-                      ? "bg-primary/5 border-primary shadow-lg shadow-primary/5" 
-                      : "bg-surface-container-low border-transparent opacity-60"
-                  )}
-                >
-                  <div className="flex items-center gap-4">
+                {!editingId && (
+                  <div 
+                    onClick={() => setRecommendToSocial(!recommendToSocial)}
+                    className={cn(
+                      "p-6 rounded-3xl border-2 transition-all cursor-pointer flex items-center justify-between",
+                      recommendToSocial 
+                        ? "bg-primary/5 border-primary shadow-lg shadow-primary/5" 
+                        : "bg-surface-container-low border-transparent opacity-60"
+                    )}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className={cn(
+                        "w-12 h-12 rounded-2xl flex items-center justify-center transition-colors",
+                        recommendToSocial ? "bg-primary text-on-primary" : "bg-surface-container-high text-on-surface-variant"
+                      )}>
+                        <Globe className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <p className="font-black text-sm uppercase tracking-tight">{t('recommend_to_community')}</p>
+                        <p className="text-[10px] font-bold opacity-60 uppercase">{t('share_with_tutors')}</p>
+                      </div>
+                    </div>
                     <div className={cn(
-                      "w-12 h-12 rounded-2xl flex items-center justify-center transition-colors",
-                      recommendToSocial ? "bg-primary text-on-primary" : "bg-surface-container-high text-on-surface-variant"
+                      "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all",
+                      recommendToSocial ? "border-primary bg-primary" : "border-on-surface-variant opacity-20"
                     )}>
-                      <Globe className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <p className="font-black text-sm uppercase tracking-tight">{t('recommend_to_community')}</p>
-                      <p className="text-[10px] font-bold opacity-60 uppercase">{t('share_with_tutors')}</p>
+                      {recommendToSocial && <Plus className="w-4 h-4 text-on-primary" />}
                     </div>
                   </div>
-                  <div className={cn(
-                    "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all",
-                    recommendToSocial ? "border-primary bg-primary" : "border-on-surface-variant opacity-20"
-                  )}>
-                    {recommendToSocial && <Plus className="w-4 h-4 text-on-primary" />}
-                  </div>
-                </div>
+                )}
 
 
                 <button

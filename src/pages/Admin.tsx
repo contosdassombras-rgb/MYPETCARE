@@ -78,21 +78,22 @@ const Admin: React.FC = () => {
   const fetchData = async () => {
     setFetching(true);
     try {
+      // Consulta simplificada para evitar erros 400 por colunas inexistentes ou relações complexas
       const [profilesRes, eventsRes] = await Promise.allSettled([
-        supabase.from('profiles').select('*, pets:pets(count)').order('created_at', { ascending: false }),
-        supabase.from('hotmart_events').select('*').order('created_at', { ascending: false })
+        supabase.from('profiles').select('*'),
+        supabase.from('hotmart_events').select('*')
       ]);
       
       if (profilesRes.status === 'fulfilled') {
         if (profilesRes.value.error) {
-          console.error('Error fetching profiles:', profilesRes.value.error);
+          console.error('Error fetching profiles:', profilesRes.value.error.message, profilesRes.value.error);
         } else {
           setProfiles(profilesRes.value.data || []);
         }
       }
       if (eventsRes.status === 'fulfilled') {
         if (eventsRes.value.error) {
-          console.error('Error fetching events:', eventsRes.value.error);
+          console.error('Error fetching events:', eventsRes.value.error.message, eventsRes.value.error);
         } else {
           setHotmartEvents(eventsRes.value.data || []);
         }

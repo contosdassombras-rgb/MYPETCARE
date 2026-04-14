@@ -72,7 +72,7 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // mas aqui limpamos o estado local.
       setLoading(false);
     }
-  }, [session?.user.id]);
+  }, [session?.user?.id]);
 
   const loadData = async () => {
     let timeoutId: any;

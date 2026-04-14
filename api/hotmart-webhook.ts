@@ -1,11 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Configurações do Supabase (Vercel Env Vars)
-const supabaseUrl = process.env.VITE_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const hotmartSecret = process.env.HOTMART_SECRET; // Token configurado na Hotmart
+// IMPORTANT: On Vercel serverless, VITE_ prefixed vars are NOT available at runtime.
+// Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in Vercel dashboard.
+const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const hotmartSecret = process.env.HOTMART_SECRET;
 
-const supabase = createClient(supabaseUrl!, supabaseServiceKey!);
+const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+  auth: { autoRefreshToken: false, persistSession: false }
+});
 
 export default async function handler(req: any, res: any) {
   // 1. Validar Método
@@ -73,35 +76,29 @@ export default async function handler(req: any, res: any) {
 
     if (logError) console.error("Database Log Error:", logError);
 
-    // 5. Atualizar ou Criar usuário no profiles
-    const { data: profile, error: fetchError } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('email', buyerEmail)
-      .maybeSingle();
+    // 5. Buscar o uuid do comprador via Supabase Auth (por email)
+    // A tabela profiles usa o UUID do auth como id e NÃO tem coluna 'email'
+    const { data: authData, error: authErr } = await supabase.auth.admin.getUserByEmail(buyerEmail);
 
-    if (fetchError) console.error("Database Fetch Error:", fetchError);
+    if (authErr) {
+      console.warn("Auth lookup warning (user may not exist yet):", authErr.message);
+    }
 
-    if (profile) {
-      // Atualiza usuário existente
-      await supabase
+    if (authData?.user) {
+      // Atualiza profile existente — sem campo 'email' que não existe na tabela
+      const { error: updateError } = await supabase
         .from('profiles')
-        .update({ 
-          active: isActive, 
+        .update({
+          active: isActive,
           name: buyerName || undefined,
-          email: buyerEmail // Garante que a coluna email esteja preenchida
         })
-        .eq('id', profile.id);
+        .eq('id', authData.user.id);
+
+      if (updateError) console.error("Profile update error:", updateError.message);
     } else if (isActive) {
-      // Cria novo usuário se foi aprovado e não existe
-      await supabase
-        .from('profiles')
-        .insert([{
-          email: buyerEmail,
-          name: buyerName || 'Usuário Hotmart',
-          active: true,
-          role: 'user'
-        }]);
+      // Comprador não tem conta ainda — apenas logar. 
+      // A criação de conta deve ser feita via create-user API ou trigger.
+      console.log(`INFO: Buyer ${buyerEmail} approved but has no account yet. Consider creating via Admin panel.`);
     }
 
     console.log("--- HOTMART WEBHOOK SUCCESS ---");

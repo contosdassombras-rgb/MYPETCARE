@@ -249,11 +249,20 @@ const Admin: React.FC = () => {
         </div>
         <h1 className="text-3xl font-black mb-2 tracking-tighter">Acesso Restrito</h1>
         <p className="text-slate-500 max-w-sm mb-8 font-medium">
-          Você não possui permissões administrativas ou seu perfil ainda está sendo carregado pelo sistema.
+          Sua conta não possui permissões de administrador. Se você é o admin, aguarde alguns segundos e tente novamente.
         </p>
         <div className="flex gap-4">
-          <Button variant="ghost" onClick={() => window.location.reload()}>Tentar Novamente</Button>
-          <Button onClick={signOut}>Sair da Conta</Button>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              // Hard reload to force fresh session + profile fetch
+              window.location.replace('/admin');
+            }}
+          >
+            Tentar Novamente
+          </Button>
+          <Button onClick={() => window.location.replace('/')}>Ir para o Dashboard</Button>
+          <Button variant="ghost" onClick={signOut} className="text-error">Sair da Conta</Button>
         </div>
       </div>
     );
@@ -438,7 +447,7 @@ const Admin: React.FC = () => {
                 <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-[#94A3B8]">Cargo</th>
                 <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-[#94A3B8]">Acesso</th>
                 <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-[#94A3B8]">Pets</th>
-                <th className="px-8 py-6 text-[10px) font-black uppercase tracking-widest text-[#94A3B8]">Ações</th>
+                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-[#94A3B8]">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">

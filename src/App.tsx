@@ -1,11 +1,10 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
+import { LanguageProvider } from './contexts/LanguageContext';
 import { UserProvider } from './contexts/UserContext';
 import { PetProvider } from './contexts/PetContext';
 import { Layout } from './components/Layout';
 import { usePushNotifications } from './hooks/usePushNotifications';
-import { LanguageSelection } from './pages/LanguageSelection';
 
 import { Dashboard } from './pages/Dashboard';
 import { PetProfile } from './pages/PetProfile';
@@ -18,26 +17,30 @@ import { Reports } from './pages/Reports';
 import { Symptoms } from './pages/Symptoms';
 import Admin from './pages/Admin';
 import { Auth } from './pages/Auth';
-import { supabase } from './lib/supabaseClient';
-import { Session } from '@supabase/supabase-js';
 import { Loader2, ShieldAlert } from 'lucide-react';
 import { useUser } from './contexts/UserContext';
 
-// Componente para capturar erros fatais e evitar tela branca
-class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
-  constructor(props: { children: React.ReactNode }) {
+// ─── Error Boundary ──────────────────────────────────────────────────────────
+// Captura erros fatais para evitar tela branca permanente
+interface ErrorBoundaryState { hasError: boolean }
+interface ErrorBoundaryProps { children: React.ReactNode }
+
+class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  declare state: ErrorBoundaryState;
+  declare props: ErrorBoundaryProps;
+
+  constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false };
   }
 
-  static getDerivedStateFromError() {
+  static getDerivedStateFromError(): ErrorBoundaryState {
     return { hasError: true };
   }
 
-  componentDidCatch(error: any, errorInfo: any) {
-    console.error("FATAL ERROR CAPTURED BY BOUNDARY:", error);
-    console.error("COMPONENT STACK:", errorInfo.componentStack);
-    // Também podemos logar para o servidor se necessário no futuro
+  componentDidCatch(error: unknown, errorInfo: React.ErrorInfo) {
+    console.error('[ErrorBoundary] Fatal error:', error);
+    console.error('[ErrorBoundary] Stack:', errorInfo.componentStack);
   }
 
   render() {
@@ -51,8 +54,8 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
           <p className="text-on-surface-variant max-w-xs mb-8">
             Ocorreu um erro inesperado. Tente recarregar a página ou voltar para o início.
           </p>
-          <button 
-            onClick={() => window.location.href = '/'}
+          <button
+            onClick={() => { window.location.href = '/'; }}
             className="px-8 py-4 bg-primary text-white rounded-2xl font-bold shadow-lg shadow-primary/20"
           >
             Recarregar Aplicativo
@@ -60,19 +63,20 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
         </div>
       );
     }
-
     return this.props.children;
   }
 }
 
+// ─── Routes ──────────────────────────────────────────────────────────────────
 const AppRoutes: React.FC = () => {
-  const { language } = useLanguage();
-  const { user, session, loading: contextLoading, isAdmin } = useUser();
+  const { session, loading: contextLoading } = useUser();
 
-  usePushNotifications(); 
+  // Push notifications — fully auth-gated and non-blocking inside the hook
+  usePushNotifications();
 
   const isAuthenticated = !!session;
-  
+
+  // Wait for Supabase to resolve the session (max 8s via safety timeout in UserContext)
   if (contextLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-surface">
@@ -81,18 +85,17 @@ const AppRoutes: React.FC = () => {
     );
   }
 
-  if (!language) {
-    return <LanguageSelection />;
-  }
-
+  // Not logged in → show auth screen
   if (!isAuthenticated) {
     return <Auth />;
   }
 
   return (
     <Routes>
+      {/* Admin panel */}
       <Route path="/admin" element={<Admin />} />
 
+      {/* User area (inside Layout) */}
       <Route element={<Layout />}>
         <Route index element={<Dashboard />} />
         <Route path="pet/:id" element={<PetProfile />} />
@@ -105,11 +108,14 @@ const AppRoutes: React.FC = () => {
         <Route path="symptoms" element={<Symptoms />} />
         <Route path="profile" element={<Settings />} />
       </Route>
+
+      {/* Fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 };
 
+// ─── App Root ─────────────────────────────────────────────────────────────────
 export default function App() {
   return (
     <ErrorBoundary>
@@ -125,4 +131,3 @@ export default function App() {
     </ErrorBoundary>
   );
 }
-

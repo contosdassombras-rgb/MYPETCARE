@@ -1,21 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Suporte para Vite (import.meta.env) e Next.js/Node (process.env)
-const supabaseUrl = 
-  import.meta.env?.VITE_SUPABASE_URL || 
-  process.env?.NEXT_PUBLIC_SUPABASE_URL || 
-  process.env?.SUPABASE_URL;
-
-const supabaseAnonKey = 
-  import.meta.env?.VITE_SUPABASE_ANON_KEY || 
-  process.env?.NEXT_PUBLIC_SUPABASE_ANON_KEY || 
-  process.env?.SUPABASE_ANON_KEY;
+// Vite injects VITE_ prefixed variables at build time via import.meta.env
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('Supabase credentials missing in environment variables (.env)');
+  console.error('[Supabase] Missing credentials — check VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your .env file');
 }
 
 export const supabase = createClient(
-  supabaseUrl || '', 
+  supabaseUrl || '',
   supabaseAnonKey || ''
 );

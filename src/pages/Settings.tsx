@@ -125,7 +125,7 @@ export const Settings: React.FC = () => {
       {/* Tab Switcher */}
       <div className="flex gap-2 p-2 mb-12 bg-surface-container-low/50 rounded-3xl mx-4">
         <button 
-          onClick={() => setActiveTab('profile')}
+          onClick={() => setSearchParams({ tab: 'profile' })}
           className={cn(
             "flex-1 py-4 rounded-2xl font-black transition-all",
             activeTab === 'profile' ? "bg-white shadow-lg text-primary scale-[1.02]" : "text-on-surface-variant opacity-40 hover:opacity-100"
@@ -134,7 +134,7 @@ export const Settings: React.FC = () => {
           {t('profile')}
         </button>
         <button 
-          onClick={() => setActiveTab('notifications')}
+          onClick={() => setSearchParams({ tab: 'notifications' })}
           className={cn(
             "flex-1 py-4 rounded-2xl font-black transition-all",
             activeTab === 'notifications' ? "bg-white shadow-lg text-primary scale-[1.02]" : "text-on-surface-variant opacity-40 hover:opacity-100"
@@ -143,7 +143,7 @@ export const Settings: React.FC = () => {
           {t('notifications')}
         </button>
         <button 
-          onClick={() => setActiveTab('app')}
+          onClick={() => setSearchParams({ tab: 'app' })}
           className={cn(
             "flex-1 py-4 rounded-2xl font-black transition-all",
             activeTab === 'app' ? "bg-white shadow-lg text-primary scale-[1.02]" : "text-on-surface-variant opacity-40 hover:opacity-100"
@@ -224,7 +224,7 @@ export const Settings: React.FC = () => {
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-[0.2em] ml-2">
-                      WhatsApp
+                      {t('whatsapp')}
                     </label>
                     <input
                       type="tel"

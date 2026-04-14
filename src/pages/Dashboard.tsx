@@ -153,7 +153,10 @@ Return only the JSON. No explanation, no markdown, no backticks.`;
               </div>
             </div>
             <Button 
-              onClick={() => navigate('/settings?tab=profile')}
+              onClick={() => {
+                console.log('Navigating to profile...');
+                navigate('/profile?tab=profile');
+              }}
               className="w-full md:w-auto px-10 py-6 bg-white text-primary hover:bg-white/90 rounded-2xl font-black tracking-tighter shadow-lg"
             >
               {t('complete_profile_cta')}

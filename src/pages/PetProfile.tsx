@@ -182,27 +182,6 @@ export const PetProfile: React.FC = () => {
                         </div>
 
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              const text = `${t('share_document')}: ${doc.title}`;
-                              window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
-                            }}
-                            className="text-on-surface-variant hover:text-green-600"
-                          >
-                            <Share2 className="w-4 h-4" />
-                          </Button>
-
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleSendToMyWhatsApp(doc.title, pet.name)}
-                            className="text-green-600"
-                          >
-                            <Send className="w-4 h-4" />
-                          </Button>
-                          
                           {doc.attachments?.[0] && (
                             <a href={doc.attachments[0]} download={doc.title} target="_blank" rel="noopener noreferrer">
                               <Button variant="ghost" size="icon">

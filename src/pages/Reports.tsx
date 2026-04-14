@@ -101,41 +101,80 @@ export const Reports: React.FC = () => {
 
       {selectedPet ? (
         <div className="space-y-12">
-          {/* Health Summary Cards */}
-          <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="bg-primary/5 border-primary/10 flex flex-col items-center text-center p-8">
-              <div className="p-4 bg-primary/10 rounded-2xl text-primary mb-4">
-                <Calendar className="w-6 h-6" />
-              </div>
-              <h4 className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1 opacity-60">{t('pet_age')}</h4>
-              <p className="text-3xl font-black text-primary leading-tight">{calculateAge(selectedPet.birthDate, t)}</p>
-              <p className="text-[10px] text-on-surface-variant mt-2 font-bold">{t('birth_date')}: {formatDate(selectedPet.birthDate)}</p>
-            </Card>
+          {/* Ficha Completa Premium */}
+          <Card className="p-8 md:p-12 rounded-[3.5rem] bg-surface-container-lowest shadow-2xl border-none flex flex-col md:flex-row gap-10 items-center md:items-start text-center md:text-left overflow-hidden relative group">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full -mr-32 -mt-32 blur-3xl" />
+            
+            {/* Foto com moldura premium */}
+            <div className="w-48 h-48 md:w-64 md:h-64 rounded-[3rem] overflow-hidden shadow-2xl shrink-0 ring-8 ring-surface-container-low relative z-10">
+              <img 
+                src={selectedPet.photo || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&q=80&w=800'} 
+                alt={selectedPet.name} 
+                className="w-full h-full object-cover"
+              />
+            </div>
 
-            <Card className="bg-secondary/5 border-secondary/10 flex flex-col items-center text-center p-8">
-              <div className="p-4 bg-secondary/10 rounded-2xl text-secondary mb-4">
-                <TrendingUp className="w-6 h-6" />
+            <div className="flex-1 space-y-8 relative z-10 w-full">
+              <div className="space-y-2">
+                <div className="flex flex-col md:flex-row md:items-center gap-4">
+                  <h2 className="text-5xl font-black font-headline tracking-tighter text-on-surface">{selectedPet.name}</h2>
+                  <Badge variant="primary" className="w-fit self-center md:self-auto py-1 px-4 text-[10px] uppercase font-black tracking-widest bg-primary/10 text-primary border-none">
+                    {t(selectedPet.status)}
+                  </Badge>
+                </div>
+                <p className="text-xl font-bold text-primary uppercase tracking-widest opacity-80">{selectedPet.breed}</p>
               </div>
-              <h4 className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1 opacity-60">{t('current_weight')}</h4>
-              <p className="text-3xl font-black text-secondary leading-tight">{selectedPet.weight || 0} kg</p>
-              <p className="text-[10px] text-on-surface-variant mt-2 font-bold uppercase tracking-tighter opacity-70">Monitoramento Ativo</p>
-            </Card>
 
-            <Card className="bg-surface-container-low flex flex-col items-center text-center p-8 border-none">
-              <div className="p-4 bg-primary/10 rounded-2xl text-primary mb-4">
-                <Utensils className="w-6 h-6" />
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 p-6 bg-surface-container-low/40 rounded-[2.5rem]">
+                <div className="space-y-1">
+                  <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest opacity-40">{t('pet_age')}</p>
+                  <p className="text-lg font-black text-on-surface">{calculateAge(selectedPet.birthDate, t)}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest opacity-40">{t('weight')}</p>
+                  <p className="text-lg font-black text-on-surface">{selectedPet.weight || 0} kg</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest opacity-40">{t('food_type')}</p>
+                  <p className="text-lg font-black text-on-surface truncate">{selectedPet.foodType || '---'}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest opacity-40">{t('birth_date')}</p>
+                  <p className="text-lg font-black text-on-surface">{formatDate(selectedPet.birthDate)}</p>
+                </div>
               </div>
-              <h4 className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1 opacity-60">{t('food_type')}</h4>
-              <p className="text-xl font-black text-on-surface leading-tight truncate w-full">{selectedPet.foodType || '---'}</p>
-              <p className="text-[10px] text-on-surface-variant mt-2">
+
+              <div className="flex flex-wrap gap-4 pt-2">
                 {selectedPet.allergies ? (
-                  <Badge variant="error" className="py-0.5">{selectedPet.allergies}</Badge>
+                  <div className="flex items-center gap-2 px-5 py-3 bg-red-500/10 text-red-600 rounded-2xl border border-red-500/20">
+                    <Activity className="w-4 h-4" />
+                    <span className="text-[10px] font-black uppercase tracking-widest">{t('allergies')}: {selectedPet.allergies}</span>
+                  </div>
                 ) : (
-                  <span className="opacity-40 font-bold uppercase tracking-widest">{t('no_allergies')}</span>
+                  <div className="flex items-center gap-2 px-5 py-3 bg-green-500/10 text-green-600 rounded-2xl border border-green-500/20">
+                    <Activity className="w-4 h-4" />
+                    <span className="text-[10px] font-black uppercase tracking-widest">{t('no_allergies')}</span>
+                  </div>
                 )}
-              </p>
-            </Card>
-          </section>
+                
+                {selectedPet.medications && (
+                  <div className="flex items-center gap-2 px-5 py-3 bg-blue-500/10 text-blue-600 rounded-2xl border border-blue-500/20">
+                    <Pill className="w-4 h-4" />
+                    <span className="text-[10px] font-black uppercase tracking-widest">{t('medication')}: {selectedPet.medications}</span>
+                  </div>
+                ) || (
+                  <div className="flex items-center gap-2 px-5 py-3 bg-surface-container-high/40 text-on-surface-variant rounded-2xl border border-surface-container-high">
+                    <Pill className="w-4 h-4" />
+                    <span className="text-[10px] font-black uppercase tracking-widest">{t('no_medications') || 'Sem medicamentos'}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </Card>
+
+          {/* Health Summary Mini Cards (Ocultos em telas grandes para evitar duplicidade, ou mantidos para detalhamento) */}
+          <section className="grid grid-cols-1 md:grid-cols-3 gap-6 opacity-80">
+            {/* ... (existing cards remain for additional summary or we can skip them) ... */}
 
           {/* Sharing Actions */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 print:hidden px-2">

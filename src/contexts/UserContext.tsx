@@ -42,12 +42,14 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const lastLoadedIdRef = React.useRef<string | null>(null);
 
+  const isMounted = React.useRef(true);
+
   useEffect(() => {
-    let mounted = true;
+    isMounted.current = true;
 
     // Função única para lidar com mudança de sessão
     const handleSesssionChange = async (newSession: Session | null, event: string) => {
-      if (!mounted) return;
+      if (!isMounted.current) return;
       
       const userId = newSession?.user?.id;
       console.log(`DEBUG: Auth Event [${event}] - User: ${userId || 'none'}`);
@@ -78,7 +80,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } catch (err) {
         console.error("DEBUG: Failed to handle session change:", err);
       } finally {
-        if (mounted) setLoading(false);
+        if (isMounted.current) setLoading(false);
       }
     };
 
@@ -90,7 +92,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // 2. Fallback manual apenas se o listener demorar ou falhar
     const checkInitialSession = async () => {
       const { data: { session: s } } = await supabase.auth.getSession();
-      if (mounted && !lastLoadedIdRef.current && s?.user?.id) {
+      if (isMounted.current && !lastLoadedIdRef.current && s?.user?.id) {
         console.log("DEBUG: Manual session fallback check triggered.");
         await handleSesssionChange(s, 'MANUAL_CHECK');
       }
@@ -99,14 +101,14 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // 3. Safety timeout para não travar o app - aumentado para 10s para estabilidade
     const timeout = setTimeout(() => {
-      if (mounted && loading) {
+      if (isMounted.current && loading) {
         console.warn('DEBUG: Auth safety timeout reached');
         setLoading(false);
       }
     }, 10000);
 
     return () => {
-      mounted = false;
+      isMounted.current = false;
       clearTimeout(timeout);
       subscription?.unsubscribe();
     };
@@ -126,6 +128,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (data) {
+        console.log("DEBUG ROLE:", data.role);
+        
         const profileData: UserProfile = {
           id: data.id,
           name: data.name || DEFAULT_USER.name,
@@ -136,11 +140,6 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           role: data.role === 'admin' ? 'admin' : 'user',
           active: data.active !== false,
         };
-        
-        console.log("DEBUG: Profile Loaded Successfully", {
-          id: data.id,
-          role: profileData.role,
-        });
         
         setUser(profileData);
       } else {
@@ -154,7 +153,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser({ ...DEFAULT_USER, id: userId });
       }
     } finally {
-      if (mounted) setLoading(false);
+      setLoading(false);
     }
   };
 

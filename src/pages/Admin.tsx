@@ -192,6 +192,33 @@ const Admin: React.FC = () => {
     }
   };
 
+  const handleSyncUser = async (user: any) => {
+    try {
+      setFetching(true);
+      const response = await fetch('/api/admin/create-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: user.email,
+          name: user.name,
+          role: user.role,
+        })
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || 'Falha ao sincronizar');
+      }
+
+      alert('Acesso sincronizado e senha resetada com sucesso!');
+      fetchData();
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setFetching(false);
+    }
+  };
+
   // --- CÁLCULOS DE KPI ---
   const stats = useMemo(() => {
     const total = profiles.length;
@@ -428,14 +455,24 @@ const Admin: React.FC = () => {
                           </td>
                           <td className="px-8 py-6 font-black">{p.pets?.[0]?.count || 0}</td>
                           <td className="px-8 py-6">
-                             <Button 
-                               variant="ghost" 
-                               size="sm" 
-                               onClick={() => toggleUserStatus(p.id, p.active !== false)}
-                               className={cn("text-[10px] font-black uppercase", p.active !== false ? "text-error" : "text-success")}
-                             >
-                               {p.active !== false ? 'Bloquear' : 'Liberar'}
-                             </Button>
+                             <div className="flex items-center gap-2">
+                               <Button 
+                                 variant="ghost" 
+                                 size="sm" 
+                                 onClick={() => toggleUserStatus(p.id, p.active !== false)}
+                                 className={cn("text-[10px] font-black uppercase", p.active !== false ? "text-error" : "text-success")}
+                               >
+                                 {p.active !== false ? 'Bloquear' : 'Liberar'}
+                               </Button>
+                               <Button 
+                                 variant="ghost" 
+                                 size="sm" 
+                                 onClick={() => handleSyncUser(p)}
+                                 className="text-[10px] font-black uppercase text-primary"
+                               >
+                                 Sincronizar
+                               </Button>
+                             </div>
                           </td>
                         </tr>
                       ))}

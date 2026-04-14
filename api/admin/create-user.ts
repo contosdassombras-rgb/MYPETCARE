@@ -46,22 +46,29 @@ export default async function handler(req: any, res: any) {
     // Se o usuário já existir, authError.status será 422 ou similar. 
     // Em produção, talvez queiramos apenas atualizar o perfil.
     if (authError) {
-      if (authError.message.includes('already registered')) {
-        // Apenas atualizar o perfil se o usuário já existir
+        // Apenas atualizar o perfil e FORÇAR SENHA se o usuário já existir
         const { data: existingUser } = await adminSupabase.auth.admin.getUserByEmail(email);
         if (existingUser?.user) {
+          // Forçamos a atualização da senha no Auth para o caso de dessincronização
+          const { error: authUpdateError } = await adminSupabase.auth.admin.updateUserById(
+            existingUser.user.id, 
+            { password: passToUse }
+          );
+          
+          if (authUpdateError) console.warn('[create-user] Auth update warning:', authUpdateError.message);
+
           const { error: profileError } = await adminSupabase
             .from('profiles')
             .upsert({
               id: existingUser.user.id,
-              email: email, // Agora incluímos o e-mail no profile
+              email: email, 
               name: name || undefined,
               role: role || undefined,
               active: true,
             }, { onConflict: 'id' });
           
           if (profileError) throw profileError;
-          return res.status(200).json({ success: true, message: 'Existing user profile updated', user: existingUser.user });
+          return res.status(200).json({ success: true, message: 'Existing user account synced and password updated', user: existingUser.user });
         }
       }
       throw authError;

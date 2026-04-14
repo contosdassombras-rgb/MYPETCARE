@@ -35,7 +35,7 @@ export const Auth: React.FC = () => {
         if (isAdminMode) {
           throw new Error('E-mail ou senha administrativos incorretos.');
         } else {
-          throw new Error('Este e-mail ainda não está liberado ou não foi encontrado.');
+          throw new Error('E-mail não liberado ou senha incorreta. Se o seu acesso for novo, peça ao administrador para "Sincronizar" sua conta no painel.');
         }
       }
     } catch (err: any) {

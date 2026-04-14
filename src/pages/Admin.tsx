@@ -28,7 +28,13 @@ interface AdminUserProfile {
 
 export const Admin: React.FC = () => {
   const { t } = useLanguage();
-  const { isAdmin, loading } = useUser();
+  const { user, session, isAdmin, loading } = useUser();
+  console.log("DEBUG: Admin Page Render", { 
+    isAdmin, 
+    loading, 
+    userRole: user.role, 
+    sessionEmail: session?.user.email 
+  });
   const [users, setUsers] = useState<AdminUserProfile[]>([]);
   const [usersLoading, setUsersLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -44,7 +50,31 @@ export const Admin: React.FC = () => {
   }
 
   if (!isAdmin) {
-    return <Navigate to="/" replace />;
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-surface p-6 text-center">
+        <div className="w-20 h-20 bg-error/10 rounded-[2rem] flex items-center justify-center text-error mb-6">
+          <Shield className="w-10 h-10" />
+        </div>
+        <h1 className="text-3xl font-black font-headline tracking-tighter mb-2">Acesso Negado</h1>
+        <p className="text-on-surface-variant opacity-60 max-w-md mx-auto mb-8 font-medium">
+          Você não tem permissões administrativas para acessar esta área. Se você é um administrador, verifique seu cargo na tabela de perfis.
+        </p>
+        <div className="bg-surface-container-low p-6 rounded-3xl mb-8 text-left w-full max-w-sm">
+          <p className="text-[10px] font-black uppercase tracking-widest opacity-40 mb-3 text-center">Dados Atuais</p>
+          <div className="space-y-2">
+            <p className="text-xs font-bold text-on-surface-variant flex justify-between">
+              E-mail: <span className="text-on-surface">{session?.user.email}</span>
+            </p>
+            <p className="text-xs font-bold text-on-surface-variant flex justify-between">
+              Cargo: <span className="text-error uppercase">{user.role || 'nulo'}</span>
+            </p>
+          </div>
+        </div>
+        <Button onClick={() => window.location.href = '/'} variant="primary" className="px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-[10px]">
+          Voltar para Home
+        </Button>
+      </div>
+    );
   }
   
   // Settings States

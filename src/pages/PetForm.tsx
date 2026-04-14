@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { usePets, Pet } from '../contexts/PetContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Camera, Save, ChevronLeft, Trash2, Upload, FileText, Image as ImageIcon, X } from 'lucide-react';
+import { Camera, Save, ChevronLeft, Trash2, Upload, FileText, Image as ImageIcon, X, Loader2 } from 'lucide-react';
 import { checkWeightVulnerability } from '../lib/healthUtils';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
@@ -36,6 +36,7 @@ export const PetForm: React.FC = () => {
   const [weightInput, setWeightInput] = useState(existingPet?.weight.toString() || '');
   const [documentFiles, setDocumentFiles] = useState<{ name: string, type: string, url: string }[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   const sanitizeFilename = (name: string) => {
     return name
@@ -153,27 +154,44 @@ export const PetForm: React.FC = () => {
     const files = e.target.files;
     if (!files) return;
 
+    setIsUploading(true);
+    let processedCount = 0;
+
     Array.from(files).forEach((file: any) => {
       if (file.size > 5 * 1024 * 1024) {
         alert("Arquivo muito grande. Limite de 5MB para salvamento local.");
+        processedCount++;
+        if (processedCount === files.length) setIsUploading(false);
         return;
       }
 
       const reader = new FileReader();
-      reader.onloadend = () => {
+      reader.onloadend = async () => {
         const base64 = reader.result as string;
         
-        if (id) {
-          addHistory(id, {
-            type: 'document',
-            title: file.name,
-            date: new Date().toISOString().split('T')[0],
-            attachments: [base64],
-            attachmentType: file.type.includes('pdf') ? 'pdf' : (file.type.includes('word') ? 'doc' : 'img')
-          });
-        } else {
-          setDocumentFiles(prev => [...prev, { name: file.name, type: file.type, url: base64 }]);
+        try {
+          if (id) {
+            await addHistory(id, {
+              type: 'document',
+              title: file.name,
+              date: new Date().toISOString().split('T')[0],
+              attachments: [base64],
+              attachmentType: file.type.includes('pdf') ? 'pdf' : (file.type.includes('word') ? 'doc' : 'img')
+            });
+          } else {
+            setDocumentFiles(prev => [...prev, { name: file.name, type: file.type, url: base64 }]);
+          }
+        } catch (err) {
+          console.error('Error adding history:', err);
+          alert('Erro ao carregar arquivo.');
+        } finally {
+          processedCount++;
+          if (processedCount === files.length) setIsUploading(false);
         }
+      };
+      reader.onerror = () => {
+        processedCount++;
+        if (processedCount === files.length) setIsUploading(false);
       };
       reader.readAsDataURL(file);
     });
@@ -313,6 +331,28 @@ export const PetForm: React.FC = () => {
 
           {/* Document Previews */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {isUploading && (
+              <Card className="flex items-center justify-center p-8 rounded-2xl bg-primary/5 border-2 border-dashed border-primary/20">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              </Card>
+            )}
+
+            {/* Existing Documents (History) */}
+            {id && pets.find(p => p.id === id)?.history.filter(h => h.type === 'document').map((doc) => (
+              <Card key={doc.id} className="flex items-center gap-4 p-4 rounded-2xl bg-surface-container-low/50">
+                <div className="p-3 bg-primary/10 rounded-xl text-primary">
+                  {doc.attachmentType === 'img' ? <ImageIcon className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
+                </div>
+                <div className="flex-1 overflow-hidden">
+                  <p className="text-sm font-bold text-on-surface truncate">{doc.title}</p>
+                </div>
+                <Button variant="ghost" size="icon" onClick={() => deleteHistory(id, doc.id)}>
+                  <Trash2 className="w-5 h-5 text-error" />
+                </Button>
+              </Card>
+            ))}
+
+            {/* Pending Documents (New Pet) */}
             {documentFiles.map((doc, i) => (
               <Card key={i} className="flex items-center gap-4 p-4 rounded-2xl bg-surface-container-low/50">
                 <div className="p-3 bg-primary/10 rounded-xl text-primary">

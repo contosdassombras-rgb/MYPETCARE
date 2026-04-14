@@ -4,10 +4,12 @@ const { motion, AnimatePresence } = m;
 import { 
   Users, UserCheck, UserMinus, DollarSign, Search, 
   Settings as SettingsIcon, Shield, Trash2, CheckCircle, 
-  XCircle, Filter, ChevronRight, Save, Key, Mail, Plus
+  XCircle, Filter, ChevronRight, Save, Key, Mail, Plus, Loader2
 } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useUser } from '../contexts/UserContext';
+import { Navigate } from 'react-router-dom';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -26,10 +28,24 @@ interface AdminUserProfile {
 
 export const Admin: React.FC = () => {
   const { t } = useLanguage();
+  const { isAdmin, loading: contextLoading } = useUser();
   const [users, setUsers] = useState<AdminUserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings'>('dashboard');
+
+  if (contextLoading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-surface gap-4">
+        <Loader2 className="w-10 h-10 animate-spin text-primary opacity-20" />
+        <p className="text-sm font-bold text-on-surface-variant opacity-50 uppercase tracking-widest">Verificando permissões...</p>
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return <Navigate to="/" replace />;
+  }
   
   // Settings States
   const [newEmail, setNewEmail] = useState('');

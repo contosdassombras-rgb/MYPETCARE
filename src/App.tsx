@@ -35,7 +35,9 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
   }
 
   componentDidCatch(error: any, errorInfo: any) {
-    console.error("FATAL ERROR CAPTURED BY BOUNDARY:", error, errorInfo);
+    console.error("FATAL ERROR CAPTURED BY BOUNDARY:", error);
+    console.error("COMPONENT STACK:", errorInfo.componentStack);
+    // Também podemos logar para o servidor se necessário no futuro
   }
 
   render() {

@@ -81,7 +81,7 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setLoading(true);
       console.log('DEBUG: PetContext - loadData started');
 
-      // Safety timeout reduzido para 3s para maior agilidade no dashboard
+      // Safety timeout: aumentado para 10s para evitar travamento falso em redes lentas
       timeoutId = setTimeout(() => {
         setLoading(current => {
           if (current) {
@@ -90,7 +90,7 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           }
           return current;
         });
-      }, 3000);
+      }, 10000);
       
       const { data: petData, error: petError } = await supabase
         .from('pets')

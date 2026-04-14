@@ -97,13 +97,13 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
     checkInitialSession();
 
-    // 3. Safety timeout para não travar o app - reduzido para 3s para maior fluidez
+    // 3. Safety timeout para não travar o app - aumentado para 10s para estabilidade
     const timeout = setTimeout(() => {
       if (mounted && loading) {
         console.warn('DEBUG: Auth safety timeout reached');
         setLoading(false);
       }
-    }, 3000);
+    }, 10000);
 
     return () => {
       mounted = false;
@@ -144,15 +144,15 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         setUser(profileData);
       } else {
-        console.warn("DEBUG: Profile not found. Creating default...");
-        const newProfile = { id: userId, name: DEFAULT_USER.name, photo_url: DEFAULT_USER.photo, role: 'user', active: true };
-        await supabase.from('profiles').insert([newProfile]);
-        setUser({ ...DEFAULT_USER, id: userId });
+        console.warn("DEBUG: Profile not found. Defaulting to user role...");
+        setUser({ ...DEFAULT_USER, id: userId, role: 'user' });
       }
     } catch (err) {
       console.error('DEBUG: Profile load error:', err);
-      // Fallback para evitar travamento
-      setUser({ ...DEFAULT_USER, id: userId });
+      // Mantemos o usuário anterior ou default se falhar feio
+      if (!user.id) {
+        setUser({ ...DEFAULT_USER, id: userId });
+      }
     } finally {
       if (mounted) setLoading(false);
     }

@@ -244,17 +244,23 @@ const Admin: React.FC = () => {
   if (!isAdmin) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#F8FAFC] p-6 text-center">
-        <ShieldAlert className="w-16 h-16 text-error mb-6" />
-        <h1 className="text-3xl font-black mb-2">Acesso Restrito</h1>
-        <p className="text-slate-500 mb-8">Você não possui permissões administrativas.</p>
-        <Button onClick={signOut}>Sair</Button>
+        <div className="w-20 h-20 bg-error/10 text-error rounded-3xl flex items-center justify-center mb-6">
+          <ShieldAlert className="w-10 h-10" />
+        </div>
+        <h1 className="text-3xl font-black mb-2 tracking-tighter">Acesso Restrito</h1>
+        <p className="text-slate-500 max-w-sm mb-8 font-medium">
+          Você não possui permissões administrativas ou seu perfil ainda está sendo carregado pelo sistema.
+        </p>
+        <div className="flex gap-4">
+          <Button variant="ghost" onClick={() => window.location.reload()}>Tentar Novamente</Button>
+          <Button onClick={signOut}>Sair da Conta</Button>
+        </div>
       </div>
     );
   }
 
   const filtered = profiles.filter(p => 
-    (p.name || '').toLowerCase().includes(search.toLowerCase()) ||
-    (p.email || '').toLowerCase().includes(search.toLowerCase())
+    (p.name || '').toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -454,7 +460,7 @@ const Admin: React.FC = () => {
                       </div>
                       <div>
                         <p className="font-black text-slate-900 leading-tight">{p.name || 'Sem Nome'}</p>
-                        <p className="text-[11px] text-slate-400 font-bold">{p.email || 'N/A'}</p>
+                        <p className="text-[11px] text-slate-400 font-bold">ID: {p.id ? p.id.substring(0, 8) : '---'}...</p>
                       </div>
                     </div>
                   </td>

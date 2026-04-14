@@ -172,10 +172,6 @@ export const Reports: React.FC = () => {
             </div>
           </Card>
 
-          {/* Health Summary Mini Cards (Ocultos em telas grandes para evitar duplicidade, ou mantidos para detalhamento) */}
-          <section className="grid grid-cols-1 md:grid-cols-3 gap-6 opacity-80">
-            {/* ... (existing cards remain for additional summary or we can skip them) ... */}
-
           {/* Sharing Actions */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 print:hidden px-2">
             <Button onClick={() => handleShare('my_whatsapp')} variant="surface" className="flex-col h-32 rounded-3xl bg-green-600/10 text-green-700 hover:bg-green-600/20 shadow-none border border-green-600/10">

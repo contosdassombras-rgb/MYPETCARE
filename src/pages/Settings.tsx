@@ -115,6 +115,11 @@ export const Settings: React.FC = () => {
     </button>
   );
 
+  const handleTabChange = (tab: 'profile' | 'notifications' | 'app') => {
+    setActiveTab(tab);
+    setSearchParams({ tab });
+  };
+
   return (
     <div className="max-w-3xl mx-auto pb-24">
       <header className="mb-12 px-4">
@@ -125,7 +130,7 @@ export const Settings: React.FC = () => {
       {/* Tab Switcher */}
       <div className="flex gap-2 p-2 mb-12 bg-surface-container-low/50 rounded-3xl mx-4">
         <button 
-          onClick={() => setSearchParams({ tab: 'profile' })}
+          onClick={() => handleTabChange('profile')}
           className={cn(
             "flex-1 py-4 rounded-2xl font-black transition-all",
             activeTab === 'profile' ? "bg-white shadow-lg text-primary scale-[1.02]" : "text-on-surface-variant opacity-40 hover:opacity-100"
@@ -134,7 +139,7 @@ export const Settings: React.FC = () => {
           {t('profile')}
         </button>
         <button 
-          onClick={() => setSearchParams({ tab: 'notifications' })}
+          onClick={() => handleTabChange('notifications')}
           className={cn(
             "flex-1 py-4 rounded-2xl font-black transition-all",
             activeTab === 'notifications' ? "bg-white shadow-lg text-primary scale-[1.02]" : "text-on-surface-variant opacity-40 hover:opacity-100"
@@ -143,7 +148,7 @@ export const Settings: React.FC = () => {
           {t('notifications')}
         </button>
         <button 
-          onClick={() => setSearchParams({ tab: 'app' })}
+          onClick={() => handleTabChange('app')}
           className={cn(
             "flex-1 py-4 rounded-2xl font-black transition-all",
             activeTab === 'app' ? "bg-white shadow-lg text-primary scale-[1.02]" : "text-on-surface-variant opacity-40 hover:opacity-100"

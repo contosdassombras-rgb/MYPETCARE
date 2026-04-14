@@ -102,7 +102,10 @@ export const Layout: React.FC = () => {
             </div>
             
             <div className="flex items-center gap-4">
-              <button className="p-2 text-on-surface-variant hover:bg-surface-container-low rounded-full transition-colors relative">
+              <button 
+                onClick={() => navigate('/profile?tab=notifications')}
+                className="p-2 text-on-surface-variant hover:bg-surface-container-low rounded-full transition-colors relative"
+              >
                 <Bell className="w-6 h-6" />
                 <span className="absolute top-2 right-2 w-2 h-2 bg-error rounded-full" />
               </button>

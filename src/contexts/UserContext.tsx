@@ -44,62 +44,71 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let mounted = true;
 
     const initializeAuth = async () => {
-      console.log('DEBUG: UserProvider initializing Auth...');
       try {
-        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        // Get initial session
+        const { data: { session: initialSession }, error: sessionError } = await supabase.auth.getSession();
+        
         if (!mounted) return;
-        
+
+        if (sessionError) {
+          console.error('Session error:', sessionError);
+          setLoading(false);
+          return;
+        }
+
         setSession(initialSession);
-        console.log('DEBUG: Initial Session found:', initialSession?.user.email || 'None');
-        
-        if (initialSession?.user) {
+
+        // If we have a session, load the profile
+        if (initialSession?.user?.id) {
           await loadProfile(initialSession.user.id);
         } else {
+          // No session = not authenticated, stop loading
           setLoading(false);
         }
       } catch (err) {
-        console.error('DEBUG: Auth Initialization Error:', err);
+        console.error('Auth init error:', err);
         if (mounted) setLoading(false);
       }
     };
 
     initializeAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
-      console.log('DEBUG: Auth Change Event:', event, currentSession?.user.email);
+    // Listen to auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
       if (!mounted) return;
 
-      setSession(currentSession);
-      
-      // Only reload profile on explicit login/token change if session exists
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        if (currentSession?.user) {
-          await loadProfile(currentSession.user.id);
-        }
+      setSession(newSession);
+
+      if (event === 'SIGNED_IN' && newSession?.user?.id) {
+        await loadProfile(newSession.user.id);
       } else if (event === 'SIGNED_OUT') {
         setUser(DEFAULT_USER);
+        setLoading(false);
+      } else if (event === 'TOKEN_REFRESHED' && newSession?.user?.id) {
+        await loadProfile(newSession.user.id);
+      } else if (event === 'INITIAL_SESSION') {
+        // Initial session already loaded above
         setLoading(false);
       }
     });
 
-    const safetyTimer = setTimeout(() => {
+    // Safety timeout - force stop loading after 5 seconds
+    const timeout = setTimeout(() => {
       if (mounted && loading) {
-        console.warn('DEBUG: Global Safety Loading Timeout. Forcing release.');
+        console.warn('Loading timeout reached');
         setLoading(false);
       }
-    }, 6000);
+    }, 5000);
 
     return () => {
       mounted = false;
-      clearTimeout(safetyTimer);
-      subscription.unsubscribe();
+      clearTimeout(timeout);
+      subscription?.unsubscribe();
     };
   }, []);
 
   const loadProfile = async (userId: string) => {
-    console.log('DEBUG: loadProfile starting for:', userId);
     try {
-      setLoading(true);
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -107,28 +116,22 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .maybeSingle();
 
       if (error && error.code !== 'PGRST116') {
-        console.error('DEBUG: loadProfile DB Error:', error);
         throw error;
       }
 
       if (data) {
-        console.log('DEBUG: Profile fetched successfully:', {
-          role: data.role,
-          name: data.name
-        });
-
         setUser({
           id: data.id,
           name: data.name || DEFAULT_USER.name,
           photo: data.photo_url || DEFAULT_USER.photo,
           phone: data.phone || '',
           pushEnabled: data.push_enabled || false,
-          emailEnabled: data.email_enabled || false,
-          role: data.role as 'admin' | 'user' || 'user',
-          active: data.active ?? true,
+          emailEnabled: data.email_enabled !== false,
+          role: data.role === 'admin' ? 'admin' : 'user',
+          active: data.active !== false,
         });
       } else {
-        console.log('DEBUG: Profile not found, creating new one...');
+        // Profile doesn't exist, create it
         const newProfile = {
           id: userId,
           name: DEFAULT_USER.name,
@@ -139,30 +142,25 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           role: 'user',
           active: true,
         };
+
         const { error: insertError } = await supabase
           .from('profiles')
           .insert([newProfile]);
-        
-        if (insertError) {
-          console.error('DEBUG: Profile insertion error:', insertError);
-          throw insertError;
-        }
-        
+
+        if (insertError) throw insertError;
+
         setUser({
+          ...DEFAULT_USER,
           id: userId,
-          name: newProfile.name,
-          photo: newProfile.photo_url,
-          phone: newProfile.phone,
-          pushEnabled: newProfile.push_enabled,
-          emailEnabled: newProfile.email_enabled,
-          role: newProfile.role as 'admin' | 'user',
-          active: newProfile.active,
         });
       }
     } catch (err) {
-      console.error('DEBUG: Error in loadProfile:', err);
+      console.error('Profile load error:', err);
+      setUser({
+        ...DEFAULT_USER,
+        id: userId,
+      });
     } finally {
-      console.log('DEBUG: loadProfile finished, setting loading to false.');
       setLoading(false);
     }
   };
@@ -170,25 +168,29 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateUser = async (updates: Partial<UserProfile>) => {
     setUser(prev => ({ ...prev, ...updates }));
 
-    const { data: { session: currentSession } } = await supabase.auth.getSession();
-    const userId = currentSession?.user.id;
+    try {
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      const userId = currentSession?.user.id;
 
-    if (userId) {
-      const dbUpdates: any = {};
-      if (updates.name !== undefined) dbUpdates.name = updates.name || null;
-      if (updates.photo !== undefined) dbUpdates.photo_url = updates.photo || null;
-      if (updates.phone !== undefined) dbUpdates.phone = updates.phone || '';
-      if (updates.pushEnabled !== undefined) dbUpdates.push_enabled = updates.pushEnabled;
-      if (updates.emailEnabled !== undefined) dbUpdates.email_enabled = updates.emailEnabled;
-      if (updates.role !== undefined) dbUpdates.role = updates.role;
-      if (updates.active !== undefined) dbUpdates.active = updates.active;
+      if (userId) {
+        const dbUpdates: any = {};
+        if (updates.name !== undefined) dbUpdates.name = updates.name || null;
+        if (updates.photo !== undefined) dbUpdates.photo_url = updates.photo || null;
+        if (updates.phone !== undefined) dbUpdates.phone = updates.phone || '';
+        if (updates.pushEnabled !== undefined) dbUpdates.push_enabled = updates.pushEnabled;
+        if (updates.emailEnabled !== undefined) dbUpdates.email_enabled = updates.emailEnabled;
+        if (updates.role !== undefined) dbUpdates.role = updates.role;
+        if (updates.active !== undefined) dbUpdates.active = updates.active;
 
-      const { error } = await supabase
-        .from('profiles')
-        .update(dbUpdates)
-        .eq('id', userId);
+        const { error } = await supabase
+          .from('profiles')
+          .update(dbUpdates)
+          .eq('id', userId);
 
-      if (error) console.error('Error updating profile in DB:', error);
+        if (error) console.error('Update error:', error);
+      }
+    } catch (err) {
+      console.error('Update error:', err);
     }
   };
 

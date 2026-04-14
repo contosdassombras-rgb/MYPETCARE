@@ -34,10 +34,13 @@ export default async function handler(req: any, res: any) {
     const buyerEmail = body.data?.buyer?.email;
     const buyerName = body.data?.buyer?.name;
     const transactionId = body.data?.purchase?.transaction;
+    const priceValue = body.data?.purchase?.price?.value;
+    const priceCurrency = body.data?.purchase?.price?.currency_code;
 
     if (!buyerEmail) {
       return res.status(200).json({ status: 'ignored', message: 'No email' });
     }
+    const normalizedEmail = buyerEmail.toLowerCase().trim();
 
     // 2. Mapeamento de Status
     let isActive = false;
@@ -49,16 +52,18 @@ export default async function handler(req: any, res: any) {
     // 3. Log do evento
     await supabase.from('hotmart_events').insert([{
       event_type: event,
-      buyer_email: buyerEmail,
+      buyer_email: normalizedEmail,
       buyer_name: buyerName,
       transaction_id: transactionId,
+      price_value: priceValue,
+      price_currency: priceCurrency,
       status: event,
       payload: body
     }]);
 
     // 4. Garantir Usuário no Auth e Profile
     let userId = null;
-    const { data: authData } = await supabase.auth.admin.getUserByEmail(buyerEmail);
+    const { data: authData } = await supabase.auth.admin.getUserByEmail(normalizedEmail);
 
     if (authData?.user) {
       userId = authData.user.id;
@@ -77,7 +82,7 @@ export default async function handler(req: any, res: any) {
         userId = newUser.user.id;
         await supabase.from('profiles').upsert({
           id: userId,
-          email: buyerEmail,
+          email: normalizedEmail,
           name: buyerName || '',
           active: true,
           role: 'user'

@@ -19,6 +19,8 @@ interface UserContextType {
   loading: boolean;
   isAdmin: boolean;
   signOut: () => Promise<void>;
+  updateUser: (updates: Partial<UserProfile>) => Promise<void>;
+  resetPhoto: () => Promise<void>;
 }
 
 const DEFAULT_USER: UserProfile = {
@@ -157,9 +159,46 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const isAdmin = user.role === 'admin';
+  
+  const updateUser = async (updates: Partial<UserProfile>) => {
+    // Update local state first for immediate UI response
+    const newUserState = { ...user, ...updates };
+    setUser(newUserState);
+
+    if (!session?.user?.id) return;
+
+    try {
+      // Map frontend fields to DB columns
+      const dbUpdates: any = {};
+      if (updates.name !== undefined) dbUpdates.name = updates.name;
+      if (updates.phone !== undefined) dbUpdates.phone = updates.phone;
+      if (updates.photo !== undefined) dbUpdates.photo_url = updates.photo;
+      if (updates.pushEnabled !== undefined) dbUpdates.push_enabled = updates.pushEnabled;
+      if (updates.emailEnabled !== undefined) dbUpdates.email_enabled = updates.emailEnabled;
+      if (updates.active !== undefined) dbUpdates.active = updates.active;
+
+      if (Object.keys(dbUpdates).length === 0) return;
+
+      const { error } = await supabase
+        .from('profiles')
+        .update(dbUpdates)
+        .eq('id', session.user.id);
+
+      if (error) {
+        console.error('[UserContext] updateUser error:', error.message);
+        // Rollback on error? Usually better to just show error.
+      }
+    } catch (err) {
+      console.error('[UserContext] updateUser unexpected error:', err);
+    }
+  };
+
+  const resetPhoto = async () => {
+    await updateUser({ photo: null });
+  };
 
   return (
-    <UserContext.Provider value={{ user, session, loading, isAdmin, signOut }}>
+    <UserContext.Provider value={{ user, session, loading, isAdmin, signOut, updateUser, resetPhoto }}>
       {children}
     </UserContext.Provider>
   );

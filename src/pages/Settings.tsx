@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useUser } from '../contexts/UserContext';
 import { useNavigate } from 'react-router-dom';
@@ -13,28 +13,25 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 
 export const Settings: React.FC = () => {
-  const [showSuccess, setShowSuccess] = useState(false);
   const { t, language, setLanguage } = useLanguage();
-  const { user, updateUser, resetPhoto } = useUser();
-  const navigate = useNavigate();
+  const { user, signOut, updateUser, resetPhoto } = useUser();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [activeTab, setActiveTab] = useState<'profile' | 'notifications'>(() => {
+    const params = new URLSearchParams(window.location.search);
+    return (params.get('tab') as 'profile' | 'notifications') || 'profile';
+  });
 
-  const handleSave = () => {
-    setShowSuccess(true);
-    setTimeout(() => setShowSuccess(false), 3000);
-  };
+  const [formData, setFormData] = useState({
+    name: user.name || '',
+    phone: user.phone || ''
+  });
 
-  const handlePushToggle = () => {
-    updateUser({ pushEnabled: !user.pushEnabled });
-  };
-
-  const handleEmailToggle = () => {
-    updateUser({ emailEnabled: !user.emailEnabled });
-  };
-
-  const handleChangeLanguage = () => {
-    setLanguage(null);
-  };
+  useEffect(() => {
+    setFormData({
+      name: user.name || '',
+      phone: user.phone || ''
+    });
+  }, [user.name, user.phone]);
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -45,6 +42,18 @@ export const Settings: React.FC = () => {
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleTogglePush = () => updateUser({ pushEnabled: !user.pushEnabled });
+  const handleToggleEmail = () => updateUser({ emailEnabled: !user.emailEnabled });
+  
+  const handleSaveProfile = async () => {
+    await updateUser(formData);
+    alert('Perfil atualizado com sucesso!');
+  };
+
+  const handleChangeLanguage = () => {
+    setLanguage(null);
   };
 
   const handleInstallPWA = () => {
@@ -93,16 +102,6 @@ export const Settings: React.FC = () => {
             <h2 className="text-2xl font-black font-headline tracking-tighter">
               {t('tutor_profile')}
             </h2>
-            <div className="flex items-center gap-4">
-              {showSuccess && (
-                <span className="text-primary font-bold text-sm animate-in fade-in slide-in-from-right-4 duration-300">
-                  {t('save_success') || 'Salvo com sucesso!'}
-                </span>
-              )}
-              <Button variant="ghost" size="sm" onClick={handleSave} className="text-primary font-black">
-                {t('save')}
-              </Button>
-            </div>
           </div>
 
           <Card className="p-10 rounded-[3rem] space-y-10 border-none bg-surface-container-low/30 shadow-none">
@@ -145,25 +144,38 @@ export const Settings: React.FC = () => {
               )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-4">
               <div className="space-y-2">
-                <Input
-                  label={t('name')}
-                  value={user.name}
-                  onChange={(e) => updateUser({ name: e.target.value })}
+                <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-[0.2em] ml-2">
+                  {t('full_name')}
+                </label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={e => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full px-6 py-5 bg-surface-container-low border-none rounded-2xl focus:ring-4 focus:ring-primary/20 outline-none transition-all font-bold text-lg"
                   placeholder="Seu nome"
                 />
               </div>
-
               <div className="space-y-2">
-                <Input
-                  label="WhatsApp"
+                <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-[0.2em] ml-2">
+                  WhatsApp
+                </label>
+                <input
                   type="tel"
-                  value={user.phone}
-                  onChange={(e) => updateUser({ phone: e.target.value })}
-                  placeholder="Ex: +55 11 99999-9999"
+                  value={formData.phone}
+                  onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                  className="w-full px-6 py-5 bg-surface-container-low border-none rounded-2xl focus:ring-4 focus:ring-primary/20 outline-none transition-all font-bold text-lg"
+                  placeholder="(00) 00000-0000"
                 />
               </div>
+              
+              <Button 
+                onClick={handleSaveProfile}
+                className="w-full py-6 rounded-2xl text-lg font-black tracking-tighter shadow-xl shadow-primary/20 mt-4"
+              >
+                {t('save_changes')}
+              </Button>
             </div>
           </Card>
         </section>
@@ -246,16 +258,10 @@ export const Settings: React.FC = () => {
             {t('support_settings')}
           </h2>
           <Card className="p-2 overflow-hidden border-none bg-surface-container-low/30 shadow-none rounded-[2.5rem]">
-            <button className="w-full flex items-center justify-between p-8 border-b border-surface-container-high/20 hover:bg-surface-container-low transition-colors text-left group">
-              <div className="flex items-center gap-6">
-                <div className="p-4 rounded-2xl bg-surface-container-low text-primary shadow-sm">
-                  <HelpCircle className="w-7 h-7" />
-                </div>
-                <span className="font-black text-on-surface text-lg leading-tight">{t('help_center')}</span>
-              </div>
-              <ChevronRight className="w-6 h-6 text-on-surface-variant opacity-30 group-hover:translate-x-1 transition-transform" />
-            </button>
-            <button className="w-full flex items-center justify-between p-8 hover:bg-error/5 transition-colors text-left group">
+            <button 
+              onClick={signOut}
+              className="w-full flex items-center justify-between p-8 hover:bg-error/5 transition-colors text-left group"
+            >
               <div className="flex items-center gap-6">
                 <div className="p-4 rounded-2xl bg-error/10 text-error">
                   <LogOut className="w-7 h-7" />

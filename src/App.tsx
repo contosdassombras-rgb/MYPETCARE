@@ -17,8 +17,10 @@ import { Reports } from './pages/Reports';
 import { Symptoms } from './pages/Symptoms';
 import Admin from './pages/Admin';
 import { Auth } from './pages/Auth';
+import { LanguageSelection } from './pages/LanguageSelection';
 import { Loader2, ShieldAlert } from 'lucide-react';
 import { useUser } from './contexts/UserContext';
+import { useLanguage } from './contexts/LanguageContext';
 
 // ─── Error Boundary ──────────────────────────────────────────────────────────
 // Captura erros fatais para evitar tela branca permanente
@@ -70,11 +72,17 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 // ─── Routes ──────────────────────────────────────────────────────────────────
 const AppRoutes: React.FC = () => {
   const { session, loading: contextLoading } = useUser();
-
+  const { language } = useLanguage();
+  
   // Push notifications — fully auth-gated and non-blocking inside the hook
   usePushNotifications();
 
   const isAuthenticated = !!session;
+
+  // 1. Language Gate (Mandatory on first access)
+  if (language === null) {
+    return <LanguageSelection />;
+  }
 
   // Wait for Supabase to resolve the session (max 8s via safety timeout in UserContext)
   if (contextLoading) {

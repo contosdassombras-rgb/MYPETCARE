@@ -610,8 +610,7 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [language, setLanguageState] = useState<Language | null>(() => {
     const saved = localStorage.getItem('mypetcare_lang');
-    // Default to Portuguese — skip the language selection gate for all users
-    return (saved as Language) || 'pt';
+    return (saved as Language) || null;
   });
 
   const setLanguage = (lang: Language | null) => {

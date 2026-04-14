@@ -27,7 +27,7 @@ export const Auth: React.FC = () => {
       const passToUse = isAdminMode ? password : TUTOR_DEFAULT_PASSWORD;
 
       const { error } = await supabase.auth.signInWithPassword({
-        email,
+        email: email.trim().toLowerCase(),
         password: passToUse
       });
 

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useUser } from '../contexts/UserContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   Globe, Bell, Shield, LogOut, ChevronRight, 
   Download, Mail, Smartphone, HelpCircle, 
@@ -15,31 +15,32 @@ import { motion, AnimatePresence } from 'motion/react';
 export const Settings: React.FC = () => {
   const { t, language, setLanguage } = useLanguage();
   const { user, signOut, updateUser, resetPhoto } = useUser();
+  const [searchParams] = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showIOSModal, setShowIOSModal] = useState(false);
   
-  const [activeTab, setActiveTab] = useState<'profile' | 'notifications' | 'app'>(() => {
-    const params = new URLSearchParams(window.location.search);
-    const tab = params.get('tab');
-    if (tab === 'profile') return 'profile';
-    if (tab === 'notifications') return 'notifications';
-    return 'profile';
-  });
-
+  const [activeTab, setActiveTab] = useState<'profile' | 'notifications' | 'app'>('profile');
   const nameInputRef = useRef<HTMLInputElement>(null);
 
-  // Sync activeTab with URL params
+  // Sync activeTab and focus with URL params Reactively
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const tab = params.get('tab');
+    const tab = searchParams.get('tab');
     if (tab === 'profile') {
       setActiveTab('profile');
-      // Auto focus name field if specifically coming to complete profile
-      setTimeout(() => nameInputRef.current?.focus(), 300);
+      // Safera focus with a small delay
+      const timer = setTimeout(() => {
+        if (nameInputRef.current) {
+          nameInputRef.current.focus();
+          nameInputRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 500);
+      return () => clearTimeout(timer);
     } else if (tab === 'notifications') {
       setActiveTab('notifications');
+    } else if (tab === 'app') {
+      setActiveTab('app');
     }
-  }, [window.location.search]);
+  }, [searchParams]);
 
   const [formData, setFormData] = useState({
     name: user.name || '',

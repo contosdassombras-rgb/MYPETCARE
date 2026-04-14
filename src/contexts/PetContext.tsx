@@ -75,8 +75,22 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [session?.user.id]);
 
   const loadData = async () => {
+    let timeoutId: any;
+    
     try {
       setLoading(true);
+      console.log('DEBUG: PetContext - loadData started');
+
+      // Safety timeout: se demorar mais de 6 segundos, libera o loading
+      timeoutId = setTimeout(() => {
+        setLoading(current => {
+          if (current) {
+            console.warn('DEBUG: PetContext - loadData safety timeout reached');
+            return false;
+          }
+          return current;
+        });
+      }, 6000);
       
       // OTIMIZAÇÃO 1: Carregar APENAS pets (sem join pesado)
       const { data: petData, error: petError } = await supabase
@@ -107,13 +121,16 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       // OTIMIZAÇÃO 3: Carregar detalhes em paralelo após a lista aparecer
       if (formattedPets.length > 0) {
-        await loadEventsAndHistoryForAllPets(formattedPets);
+        // Não usamos 'await' aqui para não bloquear o setLoading(false) se a rede estiver lenta
+        loadEventsAndHistoryForAllPets(formattedPets);
       }
       
     } catch (err) {
-      console.error('Error loading pets:', err);
+      console.error('DEBUG: PetContext - loadData error:', err);
     } finally {
+      if (timeoutId) clearTimeout(timeoutId);
       setLoading(false);
+      console.log('DEBUG: PetContext - loadData finished');
     }
   };
 

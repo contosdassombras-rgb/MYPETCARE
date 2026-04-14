@@ -176,23 +176,30 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOut = async () => {
     try {
       console.log("DEBUG: Executing explicit SignOut...");
-      await supabase.auth.signOut();
       
-      // Limpeza manual para garantir que o estado local seja resetado imediatamente
+      // 1. Limpeza IMEDIATA do estado local para feedback visual instantâneo
       setSession(null);
       setUser(DEFAULT_USER);
       setLoading(false);
-      
-      // Limpeza de cache do navegador relacionada ao Supabase
+
+      // 2. Limpeza agressiva do localStorage antes de tentar a rede
       Object.keys(localStorage).forEach(key => {
-        if (key.includes('supabase.auth.token')) {
+        if (key.includes('supabase.auth.token') || key.includes('sb-')) {
           localStorage.removeItem(key);
         }
       });
 
+      // 3. Tentar deslogar do servidor (sem bloquear a UI)
+      await supabase.auth.signOut().catch(err => {
+        console.warn("DEBUG: Remote SignOut failed, but local cleared:", err);
+      });
+
       console.log("DEBUG: SignOut complete.");
     } catch (err) {
-      console.error("DEBUG: Error during SignOut:", err);
+      console.error("DEBUG: Fatal error during SignOut:", err);
+    } finally {
+      // Garantia final de que o app não ficará em loading
+      setLoading(false);
     }
   };
 

@@ -68,7 +68,7 @@ export const PetForm: React.FC = () => {
           ...formData,
           weight: weightVal,
           photo: '', // Placeholder
-        } as Omit<Pet, 'id' | 'events' | 'history'>) || undefined;
+        } as Omit<Pet, 'id' | 'events' | 'history'>, userId) || undefined;
         
         if (!petId) throw new Error('Falha ao criar pet');
       }

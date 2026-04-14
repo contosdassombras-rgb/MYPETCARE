@@ -69,7 +69,15 @@ Provide a preliminary guidance following these strict rules:
 Return only the JSON. No explanation, no markdown, no backticks.`;
 
     try {
-      const apiKey = import.meta.env.VITE_GROQ_API_KEY;
+      let apiKey = import.meta.env.VITE_GROQ_API_KEY;
+      
+      // Limpeza de aspas se existirem no .env
+      if (apiKey) {
+        apiKey = apiKey.replace(/^["']|["']$/g, '');
+      }
+
+      console.log('DEBUG: Symptoms - API Key exists:', !!apiKey);
+
       if (!apiKey) throw new Error('VITE_GROQ_API_KEY not configured');
 
       const res = await fetch(GROQ_API_URL, {

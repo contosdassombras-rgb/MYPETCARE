@@ -43,7 +43,7 @@ export interface Pet {
 interface PetContextType {
   pets: Pet[];
   loading: boolean;
-  addPet: (pet: Omit<Pet, 'id' | 'events' | 'history'>) => Promise<void>;
+  addPet: (pet: Omit<Pet, 'id' | 'events' | 'history'>, forcedUserId?: string) => Promise<string | null | undefined>;
   updatePet: (id: string, pet: Partial<Pet>) => Promise<void>;
   deletePet: (id: string) => Promise<void>;
   addEvent: (petId: string, event: Omit<PetEvent, 'id'>) => Promise<void>;
@@ -178,9 +178,13 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const addPet = async (pet: Omit<Pet, 'id' | 'events' | 'history'>) => {
-    const { data: { session } } = await supabase.auth.getSession();
-    const userId = session?.user.id;
+  const addPet = async (pet: Omit<Pet, 'id' | 'events' | 'history'>, forcedUserId?: string) => {
+    let userId = forcedUserId;
+    if (!userId) {
+      const { data: { session } } = await supabase.auth.getSession();
+      userId = session?.user.id;
+    }
+
     if (!userId) {
       console.error('No authenticated user found for addPet');
       return;

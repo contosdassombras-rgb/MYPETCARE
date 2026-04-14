@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Phone, Mail, User, Plus, X, Trash2, Building2, ShoppingBag, Globe, MapPin, Star } from 'lucide-react';
+import { Phone, Mail, User, Plus, X, Trash2, Building2, ShoppingBag, Globe, MapPin, Star, Pencil } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { supabase } from '../lib/supabaseClient';
 
@@ -115,19 +115,51 @@ export const Veterinarian: React.FC = () => {
       const devModeId = '24b2f3ec-aca9-4eaf-8e36-a8538a274c7f';
       const userId = session.data.session?.user.id || devModeId;
 
-      const { error } = await supabase.from('professionals').insert({
-        name: contact.name,
-        type: contact.type,
-        city: contact.city,
-        state: contact.state,
-        created_by: userId
-      });
+      // 1. Inserir ou obter o profissional
+      const { data: pro, error: proError } = await supabase
+        .from('professionals')
+        .insert({
+          name: contact.name,
+          type: contact.type,
+          city: contact.city,
+          state: contact.state,
+          created_by: userId
+        })
+        .select()
+        .single();
       
-      if (error) throw error;
+      if (proError && proError.code !== '23505') throw proError; // ignore unique constraint if already exists
+
+      // Se já existia, buscamos o ID
+      let finalProId = pro?.id;
+      if (!finalProId) {
+        const { data: existingPro } = await supabase
+          .from('professionals')
+          .select('id')
+          .eq('name', contact.name)
+          .eq('city', contact.city)
+          .maybeSingle();
+        finalProId = existingPro?.id;
+      }
+
+      if (!finalProId) throw new Error('Não foi possível identificar o profissional.');
+
+      // 2. Inserir a avaliação automática de 5 estrelas
+      const { error: ratingError } = await supabase
+        .from('professional_ratings')
+        .insert({
+          professional_id: finalProId,
+          user_id: userId,
+          rating: 5,
+          comment: 'Recomendo este profissional!'
+        });
+
+      if (ratingError && ratingError.code !== '23505') throw ratingError;
+
       alert(t('recommend_to_community_success'));
     } catch (err) {
       console.error('Social recommendation error:', err);
-      alert('Erro ao recomendar.');
+      alert('Erro ao recomendar. Verifique se você já recomendou este profissional.');
     }
   };
 
@@ -169,7 +201,7 @@ export const Veterinarian: React.FC = () => {
                   className="p-2 text-on-surface-variant hover:bg-surface-container-low rounded-full transition-colors"
                   title={t('edit')}
                 >
-                  <Plus className="w-5 h-5 rotate-45" /> 
+                  <Pencil className="w-5 h-5" /> 
                 </button>
                 <button
                   onClick={() => handleDelete(contact.id)}

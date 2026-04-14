@@ -224,16 +224,15 @@ const Admin: React.FC = () => {
     const total = profiles.length;
     const active = profiles.filter(p => p.active !== false).length;
     const canceled = profiles.filter(p => p.active === false).length;
-    const engaged = profiles.filter(p => p.pets && p.pets[0]?.count > 0).length;
     const neverAccessed = profiles.filter(p => !p.last_login_at && p.active !== false).length;
-    const cartAbandonment = hotmartEvents.filter(e => (e.event_type || '').includes('ABANDONMENT')).length;
-    const waitingPayment = hotmartEvents.filter(e => (e.event_type || '').includes('WAITING')).length;
-    const totalRevenue = hotmartEvents.reduce((acc, curr) => acc + (curr.price_value || 0), 0);
-    const monthlyRevenue = hotmartEvents
-      .filter(e => new Date(e.created_at).getMonth() === new Date().getMonth())
+    const cartAbandonment = (hotmartEvents || []).filter(e => (e.event_type || '').includes('ABANDONMENT')).length;
+    const waitingPayment = (hotmartEvents || []).filter(e => (e.event_type || '').includes('WAITING')).length;
+    const totalRevenue = (hotmartEvents || []).reduce((acc, curr) => acc + (curr.price_value || 0), 0);
+    const monthlyRevenue = (hotmartEvents || [])
+      .filter(e => e.created_at && new Date(e.created_at).getMonth() === new Date().getMonth())
       .reduce((acc, curr) => acc + (curr.price_value || 0), 0);
 
-    return { total, active, canceled, engaged, neverAccessed, cartAbandonment, waitingPayment, totalRevenue, monthlyRevenue };
+    return { total, active, canceled, engaged: 0, neverAccessed, cartAbandonment, waitingPayment, totalRevenue, monthlyRevenue };
   }, [profiles, hotmartEvents]);
 
   if (loading) {

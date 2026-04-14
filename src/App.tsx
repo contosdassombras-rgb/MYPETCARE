@@ -40,9 +40,9 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
     return { hasError: true };
   }
 
-  componentDidCatch(error: unknown, errorInfo: React.ErrorInfo) {
+  componentDidCatch(error: any, errorInfo: React.ErrorInfo) {
     console.error('[ErrorBoundary] Fatal error:', error);
-    console.error('[ErrorBoundary] Stack:', errorInfo.componentStack);
+    this.setState({ error });
   }
 
   render() {
@@ -53,9 +53,19 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
             <ShieldAlert className="w-10 h-10" />
           </div>
           <h1 className="text-2xl font-black tracking-tighter mb-2">Ops! Algo deu errado.</h1>
-          <p className="text-on-surface-variant max-w-xs mb-8">
-            Ocorreu um erro inesperado. Tente recarregar a página ou voltar para o início.
+          <p className="text-on-surface-variant max-w-xs mb-6">
+            Ocorreu um erro inesperado. Tente recarregar a página.
           </p>
+
+          {this.state.error && (
+            <div className="mb-8 p-4 bg-error/5 border border-error/10 rounded-2xl text-left overflow-auto max-w-sm">
+              <p className="text-[10px] font-mono text-error font-bold mb-1 uppercase tracking-widest">Detalhes:</p>
+              <code className="text-[10px] text-error opacity-70 break-all leading-tight">
+                {this.state.error.toString()}
+              </code>
+            </div>
+          )}
+
           <button
             onClick={() => { window.location.href = '/'; }}
             className="px-8 py-4 bg-primary text-white rounded-2xl font-bold shadow-lg shadow-primary/20"

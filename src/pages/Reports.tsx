@@ -22,7 +22,7 @@ export const Reports: React.FC = () => {
   const [selectedPetId, setSelectedPetId] = useState(pets[0]?.id || '');
 
   useEffect(() => {
-    if (!selectedPetId && pets.length > 0) {
+    if (!selectedPetId && pets && pets.length > 0) {
       setSelectedPetId(pets[0].id);
     }
   }, [pets, selectedPetId]);

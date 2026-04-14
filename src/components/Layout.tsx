@@ -11,7 +11,7 @@ import { Button } from './ui/Button';
 
 export const Layout: React.FC = () => {
   const { t } = useLanguage();
-  const { user, isAdmin } = useUser();
+  const { user, isAdmin, signOut } = useUser();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -76,7 +76,7 @@ export const Layout: React.FC = () => {
               <p className="text-[10px] text-on-surface-variant uppercase tracking-widest font-black opacity-60">{isAdmin ? 'Admin' : 'Tutor'}</p>
             </div>
             <button 
-              onClick={() => supabase.auth.signOut()}
+              onClick={signOut}
               className="p-2 text-error hover:bg-error/10 rounded-full transition-colors"
               title={t('logout')}
             >

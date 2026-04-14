@@ -19,6 +19,7 @@ interface UserContextType {
   session: Session | null;
   updateUser: (updates: Partial<UserProfile>) => void;
   resetPhoto: () => void;
+  signOut: () => Promise<void>;
   loading: boolean;
   isAdmin: boolean;
 }
@@ -45,7 +46,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const initializeAuth = async () => {
       try {
-        // Get initial session
+        console.log("DEBUG: Initializing Auth Session...");
         const { data: { session: initialSession }, error: sessionError } = await supabase.auth.getSession();
         
         if (!mounted) return;
@@ -58,11 +59,11 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         setSession(initialSession);
 
-        // If we have a session, load the profile
         if (initialSession?.user?.id) {
+          console.log("DEBUG: Session found for user:", initialSession.user.id);
           await loadProfile(initialSession.user.id);
         } else {
-          // No session = not authenticated, stop loading
+          console.log("DEBUG: No session found. Loading = false.");
           setLoading(false);
         }
       } catch (err) {
@@ -73,29 +74,30 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     initializeAuth();
 
-    // Listen to auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
       if (!mounted) return;
 
+      console.log("DEBUG: Auth State Changed Event:", event);
       setSession(newSession);
 
-      if (event === 'SIGNED_IN' && newSession?.user?.id) {
+      if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && newSession?.user?.id) {
+        setLoading(true);
         await loadProfile(newSession.user.id);
       } else if (event === 'SIGNED_OUT') {
         setUser(DEFAULT_USER);
         setLoading(false);
-      } else if (event === 'TOKEN_REFRESHED' && newSession?.user?.id) {
-        await loadProfile(newSession.user.id);
       } else if (event === 'INITIAL_SESSION') {
-        // Initial session already loaded above
-        setLoading(false);
+        if (newSession?.user?.id) {
+          await loadProfile(newSession.user.id);
+        } else {
+          setLoading(false);
+        }
       }
     });
 
-    // Safety timeout - force stop loading after 5 seconds
     const timeout = setTimeout(() => {
       if (mounted && loading) {
-        console.warn('Loading timeout reached');
+        console.warn('DEBUG: Auth safety timeout reached');
         setLoading(false);
       }
     }, 5000);
@@ -109,6 +111,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loadProfile = async (userId: string) => {
     try {
+      console.log("DEBUG: Loading profile for ID:", userId);
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -120,7 +123,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (data) {
-        setUser({
+        const profileData: UserProfile = {
           id: data.id,
           name: data.name || DEFAULT_USER.name,
           photo: data.photo_url || DEFAULT_USER.photo,
@@ -129,16 +132,21 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           emailEnabled: data.email_enabled !== false,
           role: data.role === 'admin' ? 'admin' : 'user',
           active: data.active !== false,
+        };
+        
+        console.log("DEBUG: Profile Loaded Successfully", {
+          id: data.id,
+          role: profileData.role,
+          email: session?.user.email || 'pending...'
         });
+        
+        setUser(profileData);
       } else {
-        // Profile doesn't exist, create it
+        console.log("DEBUG: Profile not found. Creating default...");
         const newProfile = {
           id: userId,
           name: DEFAULT_USER.name,
           photo_url: DEFAULT_USER.photo,
-          phone: '',
-          push_enabled: false,
-          email_enabled: true,
           role: 'user',
           active: true,
         };
@@ -155,13 +163,36 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
       }
     } catch (err) {
-      console.error('Profile load error:', err);
+      console.error('DEBUG: Profile load error:', err);
       setUser({
         ...DEFAULT_USER,
         id: userId,
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const signOut = async () => {
+    try {
+      console.log("DEBUG: Executing explicit SignOut...");
+      await supabase.auth.signOut();
+      
+      // Limpeza manual para garantir que o estado local seja resetado imediatamente
+      setSession(null);
+      setUser(DEFAULT_USER);
+      setLoading(false);
+      
+      // Limpeza de cache do navegador relacionada ao Supabase
+      Object.keys(localStorage).forEach(key => {
+        if (key.includes('supabase.auth.token')) {
+          localStorage.removeItem(key);
+        }
+      });
+
+      console.log("DEBUG: SignOut complete.");
+    } catch (err) {
+      console.error("DEBUG: Error during SignOut:", err);
     }
   };
 
@@ -198,8 +229,10 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     updateUser({ photo: DEFAULT_USER.photo });
   };
 
+  const isAdmin = user.role === 'admin';
+
   return (
-    <UserContext.Provider value={{ user, session, updateUser, resetPhoto, loading, isAdmin: user.role === 'admin' }}>
+    <UserContext.Provider value={{ user, session, updateUser, resetPhoto, signOut, loading, isAdmin }}>
       {children}
     </UserContext.Provider>
   );

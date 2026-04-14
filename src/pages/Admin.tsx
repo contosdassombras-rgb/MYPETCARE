@@ -14,6 +14,7 @@ import { cn } from '../lib/utils';
 
 // Componente de Layout Exclusivo para Admin
 const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { signOut } = useUser();
   return (
     <div className="min-h-screen bg-[#F0F2F5] text-[#1C1E21] font-sans selection:bg-primary selection:text-white">
       {/* Sidebar Admin Simples */}
@@ -44,7 +45,7 @@ const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
         <div className="p-4 mt-auto">
           <button 
-            onClick={() => supabase.auth.signOut()}
+            onClick={signOut}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-error hover:bg-error/5 font-bold text-sm transition-all"
           >
             <LogOut className="w-5 h-5" />
@@ -146,7 +147,7 @@ const Admin: React.FC = () => {
           <Button onClick={() => window.location.href = '/'} className="px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-[10px] bg-slate-900 text-white hover:bg-slate-800 transition-all">
             Ir para Painel Tutor
           </Button>
-          <Button onClick={() => supabase.auth.signOut()} variant="ghost" className="px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-[10px] text-slate-500">
+          <Button onClick={signOut} variant="ghost" className="px-10 py-5 rounded-2xl font-black uppercase tracking-widest text-[10px] text-slate-500">
             Sair da Conta
           </Button>
         </div>

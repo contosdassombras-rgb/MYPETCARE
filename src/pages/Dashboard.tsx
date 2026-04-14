@@ -66,19 +66,37 @@ Return only the JSON. No explanation, no markdown, no backticks.`;
 
   // OTIMIZAÇÃO: Memoizar o cálculo de eventos para evitar re-flatMap pesado em cada render
   const allEvents = React.useMemo(() => {
-    return pets
-      .flatMap(p => (p.events || []).map(e => ({ ...e, petName: p.name })))
-      .filter(e => !e.completed)
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-      .slice(0, 3);
+    try {
+      return pets
+        .flatMap(p => (p.events || []).map(e => ({ ...e, petName: p.name })))
+        .filter(e => {
+          if (!e.date || e.completed) return false;
+          const d = new Date(`${e.date}T00:00:00`);
+          return !isNaN(d.getTime());
+        })
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+        .slice(0, 3);
+    } catch (err) {
+      console.warn('DEBUG: Error calculating allEvents:', err);
+      return [];
+    }
   }, [pets]);
 
   const formatEventDate = (date: string) => {
-    return new Date(`${date}T00:00:00`).toLocaleDateString(undefined, {
-      weekday: 'long',
-      day: '2-digit',
-      month: 'short',
-    });
+    try {
+      if (!date) return '---';
+      const d = new Date(`${date}T00:00:00`);
+      if (isNaN(d.getTime())) return '---';
+      
+      return d.toLocaleDateString(undefined, {
+        weekday: 'long',
+        day: '2-digit',
+        month: 'short',
+      });
+    } catch (err) {
+      console.warn('DEBUG: Error formatting date:', date, err);
+      return '---';
+    }
   };
 
   return (

@@ -40,67 +40,70 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<UserProfile>(DEFAULT_USER);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const lastLoadedIdRef = React.useRef<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
 
-    const initializeAuth = async () => {
+    // Função única para lidar com mudança de sessão
+    const handleSesssionChange = async (newSession: Session | null, event: string) => {
+      if (!mounted) return;
+      
+      const userId = newSession?.user?.id;
+      console.log(`DEBUG: Auth Event [${event}] - User: ${userId || 'none'}`);
+
+      // Se não houver usuário, reseta e para
+      if (!userId) {
+        setSession(null);
+        setUser(DEFAULT_USER);
+        setLoading(false);
+        lastLoadedIdRef.current = null;
+        return;
+      }
+
+      setSession(newSession);
+
+      // Evita carregar o mesmo perfil várias vezes se o ID for o mesmo
+      // Exceto em eventos explícitos de login ou atualização de token
+      if (lastLoadedIdRef.current === userId && event === 'INITIAL_SESSION') {
+        console.log("DEBUG: Profile already loaded for this ID. Skipping.");
+        setLoading(false);
+        return;
+      }
+
       try {
-        console.log("DEBUG: Initializing Auth Session...");
-        const { data: { session: initialSession }, error: sessionError } = await supabase.auth.getSession();
-        
-        if (!mounted) return;
-
-        if (sessionError) {
-          console.error('Session error:', sessionError);
-          setLoading(false);
-          return;
-        }
-
-        setSession(initialSession);
-
-        if (initialSession?.user?.id) {
-          console.log("DEBUG: Session found for user:", initialSession.user.id);
-          await loadProfile(initialSession.user.id);
-        } else {
-          console.log("DEBUG: No session found. Loading = false.");
-          setLoading(false);
-        }
+        setLoading(true);
+        await loadProfile(userId);
+        lastLoadedIdRef.current = userId;
       } catch (err) {
-        console.error('Auth init error:', err);
+        console.error("DEBUG: Failed to handle session change:", err);
+      } finally {
         if (mounted) setLoading(false);
       }
     };
 
-    initializeAuth();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
-      if (!mounted) return;
-
-      console.log("DEBUG: Auth State Changed Event:", event);
-      setSession(newSession);
-
-      if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && newSession?.user?.id) {
-        setLoading(true);
-        await loadProfile(newSession.user.id);
-      } else if (event === 'SIGNED_OUT') {
-        setUser(DEFAULT_USER);
-        setLoading(false);
-      } else if (event === 'INITIAL_SESSION') {
-        if (newSession?.user?.id) {
-          await loadProfile(newSession.user.id);
-        } else {
-          setLoading(false);
-        }
-      }
+    // 1. Iniciar listener de Auth (que dispara INITIAL_SESSION imediatamente)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+      await handleSesssionChange(currentSession, event);
     });
 
+    // 2. Fallback manual apenas se o listener demorar ou falhar
+    const checkInitialSession = async () => {
+      const { data: { session: s } } = await supabase.auth.getSession();
+      if (mounted && !lastLoadedIdRef.current && s?.user?.id) {
+        console.log("DEBUG: Manual session fallback check triggered.");
+        await handleSesssionChange(s, 'MANUAL_CHECK');
+      }
+    };
+    checkInitialSession();
+
+    // 3. Safety timeout para não travar o app
     const timeout = setTimeout(() => {
       if (mounted && loading) {
         console.warn('DEBUG: Auth safety timeout reached');
         setLoading(false);
       }
-    }, 5000);
+    }, 6000);
 
     return () => {
       mounted = false;
@@ -137,7 +140,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log("DEBUG: Profile Loaded Successfully", {
           id: data.id,
           role: profileData.role,
-          email: session?.user.email || 'pending...'
+          email: session?.user?.email || 'authenticated'
         });
         
         setUser(profileData);

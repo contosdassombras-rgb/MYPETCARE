@@ -570,5 +570,3 @@ const Admin: React.FC = () => {
 };
 
 export default Admin;
-
-export default Admin;

@@ -108,6 +108,14 @@ export const Layout: React.FC = () => {
                 <Bell className="w-6 h-6" />
                 <span className="absolute top-2 right-2 w-2 h-2 bg-error rounded-full" />
               </button>
+
+              <button 
+                onClick={signOut}
+                className="md:hidden p-2 text-error hover:bg-error/10 rounded-full transition-colors"
+                title={t('logout')}
+              >
+                <LogOut className="w-6 h-6" />
+              </button>
               
               <Link to="/profile" className="md:hidden w-10 h-10 rounded-full overflow-hidden border-2 border-primary-fixed">
                 <img

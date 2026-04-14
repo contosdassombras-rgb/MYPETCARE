@@ -6,7 +6,8 @@ import {
   CheckCircle, XCircle, ChevronRight, Loader2, LogOut,
   LayoutDashboard, Key, Mail, ShieldCheck, ShieldAlert,
   TrendingUp, Activity, UserX, AlertCircle, ShoppingCart,
-  Clock, DollarSign, Calendar, Plus, RefreshCcw, FileText
+  Clock, DollarSign, Calendar, Plus, RefreshCcw, FileText,
+  BellRing, Settings as SettingsIcon, Save
 } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -43,99 +44,34 @@ const SummaryItem: React.FC<{ label: string; value: string; colorClass: string }
   </div>
 );
 
-// --- LAYOUT ADMIN ---
-
-const AdminLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { signOut, user } = useUser();
-  const [activeTab, setActiveTab] = useState('users');
-
-  return (
-    <div className="min-h-screen bg-[#F8FAFC] text-[#1E293B] font-sans selection:bg-primary selection:text-white pb-20 lg:pb-0">
-      {/* Sidebar Admin Premium */}
-      <aside className="fixed left-0 top-0 h-full w-72 bg-white border-r border-slate-100 z-50 hidden lg:flex flex-col shadow-sm">
-        <div className="p-8 pb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-[#517CA1] rounded-2xl flex items-center justify-center text-white shadow-lg shadow-[#517CA1]/20">
-              <ShieldCheck className="w-7 h-7" />
-            </div>
-            <div>
-              <p className="font-black text-xl tracking-tighter leading-none">Admin</p>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">MyPetCare</p>
-            </div>
-          </div>
-        </div>
-
-        <nav className="flex-1 px-4 mt-8 space-y-1">
-          <div className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-[#94A3B8] opacity-60">Visão Geral</div>
-          <button 
-            onClick={() => setActiveTab('users')}
-            className={cn(
-              "w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-black text-sm transition-all group",
-              activeTab === 'users' ? "bg-primary text-white shadow-xl shadow-primary/20" : "text-slate-400 hover:bg-slate-50 hover:text-slate-600"
-            )}
-          >
-            <Users className="w-5 h-5" />
-            Gerenciar Usuários
-          </button>
-          
-          <button className="w-full flex items-center gap-4 px-6 py-4 rounded-2xl text-slate-400 hover:bg-slate-50 font-black text-sm transition-all text-left">
-            <Calendar className="w-5 h-5 opacity-40" />
-            Agenda Global
-          </button>
-
-          <div className="px-6 py-4 pt-8 text-[10px] font-black uppercase tracking-[0.2em] text-[#94A3B8] opacity-60">Integrações</div>
-          <button className="w-full flex items-center gap-4 px-6 py-4 rounded-2xl text-slate-400 hover:bg-slate-50 font-black text-sm transition-all text-left">
-            <FileText className="w-5 h-5 opacity-40" />
-            Hotmart Webhook
-          </button>
-        </nav>
-
-        <div className="p-6 border-t border-slate-50">
-          <div className="bg-slate-50 p-4 rounded-2xl mb-4">
-            <div className="flex items-center gap-3 mb-1">
-              <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
-              <p className="text-[10px] font-black text-success uppercase tracking-widest">Sistema Operacional</p>
-            </div>
-            <p className="text-[11px] text-slate-500 font-bold leading-tight">Webhook Hotmart ativo e recebendo payloads.</p>
-          </div>
-
-          <button 
-            onClick={signOut}
-            className="w-full flex items-center gap-4 px-6 py-4 rounded-2xl text-error bg-error/5 hover:bg-error/10 font-black text-sm transition-all"
-          >
-            <LogOut className="w-5 h-5" />
-            Sair do Painel
-          </button>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <main className="lg:ml-72 p-6 lg:p-12 min-h-screen">
-        <div className="max-w-7xl mx-auto">
-          {children}
-        </div>
-      </main>
-    </div>
-  );
-};
-
 // --- COMPONENTE PRINCIPAL ---
 
 const Admin: React.FC = () => {
   const { user, isAdmin, loading, signOut } = useUser();
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'integrations' | 'notifications' | 'settings'>('dashboard');
+  
+  // States para dados
   const [profiles, setProfiles] = useState<any[]>([]);
   const [hotmartEvents, setHotmartEvents] = useState<any[]>([]);
   const [fetching, setFetching] = useState(false);
   const [search, setSearch] = useState('');
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-
+  
+  // States para Settings & Notifications
+  const [settings, setSettings] = useState<Record<string, string>>({});
+  const [savingSettings, setSavingSettings] = useState(false);
+  
   // Form para novos usuários
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'user' });
   const [creating, setCreating] = useState(false);
+
+  // Alteração de senha admin
+  const [newAdminPass, setNewAdminPass] = useState('');
 
   useEffect(() => {
     if (isAdmin) {
       fetchData();
+      fetchSettings();
     }
   }, [isAdmin]);
 
@@ -147,27 +83,63 @@ const Admin: React.FC = () => {
         supabase.from('hotmart_events').select('*').order('created_at', { ascending: false })
       ]);
       
-      let profilesData = [];
-      let eventsData = [];
-
       if (profilesRes.status === 'fulfilled' && !profilesRes.value.error) {
-        profilesData = profilesRes.value.data || [];
-      } else {
-        console.error("DEBUG: Error fetching profiles:", profilesRes.status === 'fulfilled' ? profilesRes.value.error : profilesRes.reason);
+        setProfiles(profilesRes.value.data || []);
       }
-
       if (eventsRes.status === 'fulfilled' && !eventsRes.value.error) {
-        eventsData = eventsRes.value.data || [];
-      } else {
-        console.warn("DEBUG: hotmart_events query failed or table missing. This is normal if integrations are not set up yet.");
+        setHotmartEvents(eventsRes.value.data || []);
       }
-
-      setProfiles(profilesData);
-      setHotmartEvents(eventsData);
     } catch (err) {
-      console.error('DEBUG: Unexpected error in Admin fetchData:', err);
+      console.error('Error fetching admin data:', err);
     } finally {
       setFetching(false);
+    }
+  };
+
+  const fetchSettings = async () => {
+    try {
+      const { data, error } = await supabase.from('system_settings').select('*');
+      if (error) throw error;
+      const settingsMap = (data || []).reduce((acc: any, curr: any) => {
+        acc[curr.key] = curr.value;
+        return acc;
+      }, {});
+      setSettings(settingsMap);
+    } catch (err) {
+      console.error('Error fetching settings:', err);
+    }
+  };
+
+  const handleSaveSettings = async () => {
+    setSavingSettings(true);
+    try {
+      const updates = Object.entries(settings).map(([key, value]) => ({
+        key,
+        value
+      }));
+
+      const { error } = await supabase.from('system_settings').upsert(updates, { onConflict: 'key' });
+      if (error) throw error;
+      alert('Configurações salvas com sucesso!');
+    } catch (err: any) {
+      alert('Erro ao salvar: ' + err.message);
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
+  const handleUpdateAdminPass = async () => {
+    if (!newAdminPass || newAdminPass.length < 6) {
+      alert('A senha deve ter pelo menos 6 caracteres.');
+      return;
+    }
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newAdminPass });
+      if (error) throw error;
+      alert('Senha do administrador atualizada com sucesso!');
+      setNewAdminPass('');
+    } catch (err: any) {
+      alert('Erro ao atualizar senha: ' + err.message);
     }
   };
 
@@ -211,19 +183,15 @@ const Admin: React.FC = () => {
     }
   };
 
-  // --- CÁLCULOS DE KPI (Baseados no Print) ---
+  // --- CÁLCULOS DE KPI ---
   const stats = useMemo(() => {
     const total = profiles.length;
     const active = profiles.filter(p => p.active !== false).length;
     const canceled = profiles.filter(p => p.active === false).length;
     const engaged = profiles.filter(p => p.pets && p.pets[0]?.count > 0).length;
     const neverAccessed = profiles.filter(p => !p.last_login_at && p.active !== false).length;
-    
-    // Status do Webhook
-    const cartAbandonment = hotmartEvents.filter(e => e.event_type.includes('ABANDONMENT')).length;
-    const waitingPayment = hotmartEvents.filter(e => e.event_type.includes('WAITING')).length;
-
-    // Receita (Mock ou real se houver tabela)
+    const cartAbandonment = hotmartEvents.filter(e => (e.event_type || '').includes('ABANDONMENT')).length;
+    const waitingPayment = hotmartEvents.filter(e => (e.event_type || '').includes('WAITING')).length;
     const totalRevenue = hotmartEvents.reduce((acc, curr) => acc + (curr.price_value || 0), 0);
     const monthlyRevenue = hotmartEvents
       .filter(e => new Date(e.created_at).getMonth() === new Date().getMonth())
@@ -249,352 +217,439 @@ const Admin: React.FC = () => {
         </div>
         <h1 className="text-3xl font-black mb-2 tracking-tighter">Acesso Restrito</h1>
         <p className="text-slate-500 max-w-sm mb-8 font-medium">
-          Sua conta não possui permissões de administrador. Se você é o admin, aguarde alguns segundos e tente novamente.
+          Sua conta não possui permissões de administrador. 
         </p>
         <div className="flex gap-4">
-          <Button
-            variant="ghost"
-            onClick={() => {
-              // Hard reload to force fresh session + profile fetch
-              window.location.replace('/admin');
-            }}
-          >
-            Tentar Novamente
-          </Button>
           <Button onClick={() => window.location.replace('/')}>Ir para o Dashboard</Button>
-          <Button variant="ghost" onClick={signOut} className="text-error">Sair da Conta</Button>
+          <Button variant="ghost" onClick={signOut} className="text-error">Sair</Button>
         </div>
       </div>
     );
   }
 
-  const filtered = profiles.filter(p => 
-    (p.name || '').toLowerCase().includes(search.toLowerCase())
+  const filteredProfiles = profiles.filter(p => 
+    (p.name || '').toLowerCase().includes(search.toLowerCase()) ||
+    (p.email || '').toLowerCase().includes(search.toLowerCase())
   );
 
   return (
-    <AdminLayout>
-      {/* Header Dinâmico */}
-      <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 mb-12">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 bg-white rounded-3xl shadow-sm border border-slate-100 flex items-center justify-center group">
-            <LayoutDashboard className="w-7 h-7 text-[#517CA1] transition-transform group-hover:scale-110" />
-          </div>
-          <div>
-            <h1 className="text-4xl font-black tracking-tighter text-[#1C1E21]">Dashboard Admin</h1>
-            <p className="text-slate-500 font-bold flex items-center gap-2">
-              Controle geral do ecossistema 
-              <span className="w-1 h-1 rounded-full bg-slate-300" /> 
-              Gerenciamento v2.0
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <Button 
-            onClick={fetchData} 
-            variant="ghost" 
-            className="w-12 h-12 rounded-2xl p-0 hover:bg-slate-100"
-          >
-            <RefreshCcw className={cn("w-5 h-5 text-slate-400", fetching && "animate-spin")} />
-          </Button>
-          <Button 
-            onClick={() => setIsCreateModalOpen(true)}
-            className="px-6 py-4 bg-primary text-white rounded-2xl font-black text-sm flex items-center gap-3 hover:scale-[1.02] transition-all shadow-lg shadow-primary/20"
-          >
-            <Plus className="w-5 h-5" />
-            Novo Usuário
-          </Button>
-        </div>
-      </header>
-
-      {/* --- PRIMEIRA LINHA DE KPI --- */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <KpiCard 
-          title="Total de Assinantes" 
-          value={stats.total} 
-          icon={<Users />} 
-          color="bg-[#517CA1]" 
-        />
-        <KpiCard 
-          title="Assinantes Ativos" 
-          value={stats.active} 
-          icon={<UserCheck />} 
-          color="bg-[#10B981]" 
-        />
-        <KpiCard 
-          title="Cancelados" 
-          value={stats.canceled} 
-          icon={<UserMinus />} 
-          color="bg-[#EF4444]" 
-        />
-        <KpiCard 
-          title="Engajados" 
-          value={stats.engaged} 
-          icon={<Activity />} 
-          color="bg-[#8B5CF6]" 
-          subtitle="com imóveis ou clientes"
-        />
-      </div>
-
-      {/* --- SEGUNDA LINHA DE KPI (Hotmart) --- */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-        <KpiCard 
-          title="Nunca Acessaram" 
-          value={stats.neverAccessed} 
-          icon={<AlertCircle />} 
-          color="bg-[#F59E0B]" 
-          subtitle="ativos sem login"
-        />
-        <KpiCard 
-          title="Abandonos Carrinho" 
-          value={stats.cartAbandonment} 
-          icon={<ShoppingCart />} 
-          color="bg-[#F97316]" 
-          subtitle="Hotmart"
-        />
-        <KpiCard 
-          title="Aguardando Pagamento" 
-          value={stats.waitingPayment} 
-          icon={<Clock />} 
-          color="bg-[#06B6D4]" 
-          subtitle="boleto/PIX pendente"
-        />
-      </div>
-
-      <div className="flex items-center gap-3 mb-8 opacity-60">
-        <ShieldAlert className="w-4 h-4 text-primary" />
-        <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">
-          Legenda: Engajados = Usuários que cadastraram pelo menos 1 pet. Nunca Acessaram = Cadastros ativos sem registro de login.
-        </p>
-      </div>
-
-      {/* --- RESUMO DO MÊS E FATURAMENTO --- */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-12">
-        <Card className="lg:col-span-8 p-10 bg-white border-none shadow-sm rounded-[2.5rem] relative overflow-hidden">
-          <div className="flex items-center justify-between mb-8">
-            <h3 className="text-xl font-black flex items-center gap-3">
-              <Calendar className="w-6 h-6 text-primary" />
-              Resumo do Mês
-            </h3>
-            <select className="bg-slate-50 border-none outline-none font-black text-[10px] uppercase tracking-widest px-4 py-2 rounded-xl text-slate-400">
-              <option>Abril de 2026</option>
-            </select>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-8">
-            <SummaryItem label="Receita do Mês" value={`R$ ${stats.monthlyRevenue.toFixed(2)}`} colorClass="text-success" />
-            <SummaryItem label="Novas Assinaturas" value="17" colorClass="text-[#517CA1]" />
-            <SummaryItem label="Cancelamentos" value="3" colorClass="text-error" />
-            <SummaryItem label="Reembolsos" value="0" colorClass="text-warning" />
-          </div>
-
-          <div className="mt-12 p-8 bg-[#10B981] rounded-[2rem] flex items-center justify-between text-white shadow-xl shadow-success/20">
+    <div className="min-h-screen bg-[#F8FAFC] text-[#1E293B] flex flex-col lg:flex-row">
+      {/* Sidebar Admin Premium */}
+      <aside className="fixed left-0 top-0 h-full w-72 bg-white border-r border-slate-100 z-50 hidden lg:flex flex-col shadow-sm">
+        <div className="p-8 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-primary rounded-2xl flex items-center justify-center text-white shadow-lg shadow-primary/20">
+              <ShieldCheck className="w-7 h-7" />
+            </div>
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">Receita Total (Acumulada)</p>
-              <p className="text-4xl font-black">R$ {stats.totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-            </div>
-            <div className="w-16 h-16 bg-white/20 rounded-[1.5rem] flex items-center justify-center">
-              <DollarSign className="w-8 h-8" />
+              <p className="font-black text-xl tracking-tighter leading-none">Admin</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">MyPetCare</p>
             </div>
           </div>
-        </Card>
-
-        <Card className="lg:col-span-4 p-10 bg-[#4F46E5] border-none shadow-sm rounded-[2.5rem] flex flex-col justify-between text-white">
-          <div className="flex items-center justify-between">
-            <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center">
-              <Users className="w-6 h-6" />
-            </div>
-            <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Status de Rede</p>
-          </div>
-
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1">Total de Assinantes Ativos</p>
-            <p className="text-4xl font-black mb-2">{stats.active}</p>
-            <p className="text-sm font-bold opacity-60">de {stats.total} cadastrados</p>
-          </div>
-
-          <div className="h-2 w-full bg-white/10 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-white" 
-              style={{ width: `${(stats.active / stats.total) * 100}%` }} 
-            />
-          </div>
-        </Card>
-      </div>
-
-      {/* --- LISTA DE USUÁRIOS --- */}
-      <div className="flex items-center justify-between mb-8">
-        <h2 className="text-2xl font-black tracking-tight">Base de Usuários</h2>
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input 
-            type="text" 
-            placeholder="Pesquisar..." 
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="pl-12 pr-6 py-3 bg-white border border-slate-100 rounded-2xl outline-none text-sm font-bold w-64 focus:ring-4 focus:ring-primary/5 transition-all"
-          />
         </div>
-      </div>
 
-      <Card className="rounded-[2.5rem] border-none shadow-md overflow-hidden bg-white">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="bg-slate-50/50">
-                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-[#94A3B8]">Usuário</th>
-                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-[#94A3B8]">Cargo</th>
-                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-[#94A3B8]">Acesso</th>
-                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-[#94A3B8]">Pets</th>
-                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-[#94A3B8]">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {fetching ? (
-                <tr>
-                  <td colSpan={5} className="p-20 text-center">
-                    <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto opacity-20" />
-                  </td>
-                </tr>
-              ) : filtered.map(p => (
-                <tr key={p.id} className="hover:bg-slate-50/30 transition-colors">
-                  <td className="px-8 py-6">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100 overflow-hidden shrink-0">
-                        <img 
-                          src={p.photo_url || `https://ui-avatars.com/api/?name=${p.name || 'User'}&background=random`} 
-                          alt="" className="w-full h-full object-cover" 
-                        />
-                      </div>
-                      <div>
-                        <p className="font-black text-slate-900 leading-tight">{p.name || 'Sem Nome'}</p>
-                        <p className="text-[11px] text-slate-400 font-bold">ID: {p.id ? p.id.substring(0, 8) : '---'}...</p>
-                      </div>
+        <nav className="flex-1 px-4 mt-8 space-y-1">
+          <button 
+            onClick={() => setActiveTab('dashboard')}
+            className={cn(
+              "w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-black text-sm transition-all group",
+              activeTab === 'dashboard' ? "bg-primary text-white shadow-xl shadow-primary/20" : "text-slate-400 hover:bg-slate-50 hover:text-slate-600"
+            )}
+          >
+            <LayoutDashboard className="w-5 h-5" />
+            Dashboard
+          </button>
+          
+          <button 
+            onClick={() => setActiveTab('users')}
+            className={cn(
+              "w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-black text-sm transition-all group",
+              activeTab === 'users' ? "bg-primary text-white shadow-xl shadow-primary/20" : "text-slate-400 hover:bg-slate-50 hover:text-slate-600"
+            )}
+          >
+            <Users className="w-5 h-5" />
+            Usuários
+          </button>
+
+          <button 
+            onClick={() => setActiveTab('integrations')}
+            className={cn(
+              "w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-black text-sm transition-all group",
+              activeTab === 'integrations' ? "bg-primary text-white shadow-xl shadow-primary/20" : "text-slate-400 hover:bg-slate-50 hover:text-slate-600"
+            )}
+          >
+            <RefreshCcw className="w-5 h-5" />
+            Integrações
+          </button>
+
+          <div className="px-6 py-4 pt-8 text-[10px] font-black uppercase tracking-[0.2em] text-[#94A3B8] opacity-60">Configurações</div>
+          
+          <button 
+            onClick={() => setActiveTab('notifications')}
+            className={cn(
+              "w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-black text-sm transition-all group",
+              activeTab === 'notifications' ? "bg-primary text-white shadow-xl shadow-primary/20" : "text-slate-400 hover:bg-slate-50 hover:text-slate-600"
+            )}
+          >
+            <BellRing className="w-5 h-5" />
+            Notificações
+          </button>
+
+          <button 
+            onClick={() => setActiveTab('settings')}
+            className={cn(
+              "w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-black text-sm transition-all group",
+              activeTab === 'settings' ? "bg-primary text-white shadow-xl shadow-primary/20" : "text-slate-400 hover:bg-slate-50 hover:text-slate-600"
+            )}
+          >
+            <SettingsIcon className="w-5 h-5" />
+            Geral
+          </button>
+        </nav>
+
+        <div className="p-6 border-t border-slate-50">
+          <button 
+            onClick={signOut}
+            className="w-full flex items-center gap-4 px-6 py-4 rounded-2xl text-error bg-error/5 hover:bg-error/10 font-black text-sm transition-all"
+          >
+            <LogOut className="w-5 h-5" />
+            Sair do Painel
+          </button>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 lg:ml-72 p-6 lg:p-12 min-h-screen">
+        <div className="max-w-7xl mx-auto">
+          
+          {/* TAB: DASHBOARD */}
+          {activeTab === 'dashboard' && (
+            <div className="space-y-8">
+              <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 mb-12">
+                <div>
+                  <h1 className="text-4xl font-black tracking-tighter text-[#1C1E21]">Dashboard Admin</h1>
+                  <p className="text-slate-500 font-bold">Gerenciamento Geral de Assinaturas e KPIs</p>
+                </div>
+                <Button onClick={fetchData} variant="ghost" className="w-12 h-12 p-0"><RefreshCcw className={cn(fetching && "animate-spin")} /></Button>
+              </header>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <KpiCard title="Total Assinantes" value={stats.total} icon={<Users />} color="bg-[#517CA1]" />
+                <KpiCard title="Ativos" value={stats.active} icon={<UserCheck />} color="bg-[#10B981]" />
+                <KpiCard title="Cancelados" value={stats.canceled} icon={<UserMinus />} color="bg-[#EF4444]" />
+                <KpiCard title="Engajados" value={stats.engaged} icon={<Activity />} color="bg-[#8B5CF6]" subtitle="com pets" />
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <Card className="lg:col-span-8 p-10 bg-white border-none shadow-sm rounded-[2.5rem]">
+                   <h3 className="text-xl font-black mb-8 flex items-center gap-3"><DollarSign className="text-primary" /> Receita</h3>
+                   <div className="grid grid-cols-2 gap-8 mb-10">
+                     <SummaryItem label="Este Mês" value={`R$ ${stats.monthlyRevenue.toFixed(2)}`} colorClass="text-success" />
+                     <SummaryItem label="Total Acumulado" value={`R$ ${stats.totalRevenue.toFixed(2)}`} colorClass="text-slate-900" />
+                   </div>
+                   <div className="p-8 bg-success rounded-3xl text-white flex items-center justify-between">
+                     <div>
+                       <p className="text-[10px] font-black uppercase tracking-widest opacity-70">Saúde Financeira</p>
+                       <p className="text-lg font-bold">Webhook Hotmart Ativo</p>
+                     </div>
+                     <CheckCircle className="w-8 h-8 opacity-40" />
+                   </div>
+                </Card>
+                <div className="lg:col-span-4 space-y-6">
+                  <KpiCard title="Abandonos" value={stats.cartAbandonment} icon={<ShoppingCart />} color="bg-[#F97316]" />
+                  <KpiCard title="Pagamento Pendente" value={stats.waitingPayment} icon={<Clock />} color="bg-[#06B6D4]" />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB: USERS */}
+          {activeTab === 'users' && (
+            <div className="space-y-8">
+              <header className="flex justify-between items-center mb-12">
+                <h2 className="text-3xl font-black tracking-tighter">Gestão de Usuários</h2>
+                <Button onClick={() => setIsCreateModalOpen(true)} className="rounded-2xl px-8 py-4"><Plus className="w-5 h-5 mr-2" /> Novo Usuário</Button>
+              </header>
+
+              <div className="flex bg-white p-2 rounded-2xl shadow-sm border border-slate-100 mb-6">
+                <Search className="w-5 h-5 text-slate-400 ml-4 mt-3" />
+                <input 
+                  type="text" 
+                  placeholder="Pesquisar por nome ou e-mail..." 
+                  className="flex-1 px-4 py-3 outline-none font-bold text-sm bg-transparent"
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                />
+              </div>
+
+              <Card className="rounded-[2.5rem] border-none shadow-md overflow-hidden bg-white">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead className="bg-slate-50/50">
+                      <tr>
+                        <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Usuário</th>
+                        <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Cargo</th>
+                        <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Status</th>
+                        <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Pets</th>
+                        <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {fetching ? (
+                        <tr><td colSpan={5} className="p-20 text-center"><Loader2 className="animate-spin inline-block mr-2" /> Carregando...</td></tr>
+                      ) : filteredProfiles.map(p => (
+                        <tr key={p.id} className="hover:bg-slate-50/30 transition-colors">
+                          <td className="px-8 py-6">
+                            <div className="flex items-center gap-4">
+                              <div className="w-12 h-12 rounded-2xl bg-slate-100 overflow-hidden border border-slate-100">
+                                <img src={`https://ui-avatars.com/api/?name=${p.name || 'U'}&background=random`} className="w-full h-full object-cover" />
+                              </div>
+                              <div>
+                                <p className="font-black text-slate-900 leading-tight">{p.name || 'Sem Nome'}</p>
+                                <p className="text-[11px] text-slate-400 font-bold">{p.email}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-8 py-6"><Badge variant={p.role === 'admin' ? 'success' : 'surface'}>{p.role}</Badge></td>
+                          <td className="px-8 py-6">
+                            <div className={cn("inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-black uppercase", p.active !== false ? "bg-success/10 text-success" : "bg-error/10 text-error")}>
+                              <div className={cn("w-1.5 h-1.5 rounded-full", p.active !== false ? "bg-success" : "bg-error")} />
+                              {p.active !== false ? 'Ativo' : 'Bloqueado'}
+                            </div>
+                          </td>
+                          <td className="px-8 py-6 font-black">{p.pets?.[0]?.count || 0}</td>
+                          <td className="px-8 py-6">
+                             <Button 
+                               variant="ghost" 
+                               size="sm" 
+                               onClick={() => toggleUserStatus(p.id, p.active !== false)}
+                               className={cn("text-[10px] font-black uppercase", p.active !== false ? "text-error" : "text-success")}
+                             >
+                               {p.active !== false ? 'Bloquear' : 'Liberar'}
+                             </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            </div>
+          )}
+
+          {/* TAB: INTEGRATIONS (HOTMART) */}
+          {activeTab === 'integrations' && (
+            <div className="space-y-8">
+              <header className="mb-12">
+                <h2 className="text-3xl font-black tracking-tighter">Logs de Integração</h2>
+                <p className="text-slate-500 font-bold">Eventos recebidos via Webhook Hotmart</p>
+              </header>
+
+              <Card className="rounded-[2.5rem] border-none shadow-md overflow-hidden bg-white">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead className="bg-slate-50/50">
+                      <tr>
+                        <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Data</th>
+                        <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Evento</th>
+                        <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Comprador</th>
+                        <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Valor</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {hotmartEvents.map(e => (
+                        <tr key={e.id} className="hover:bg-slate-50/30">
+                          <td className="px-8 py-6 text-xs font-bold text-slate-500">{new Date(e.created_at).toLocaleString()}</td>
+                          <td className="px-8 py-6"><Badge variant="surface" className="text-[9px]">{e.event_type}</Badge></td>
+                          <td className="px-8 py-6">
+                            <p className="font-black text-sm">{e.buyer_name}</p>
+                            <p className="text-[11px] text-slate-400">{e.buyer_email}</p>
+                          </td>
+                          <td className="px-8 py-6 font-black text-success">R$ {e.price_value?.toFixed(2)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            </div>
+          )}
+
+          {/* TAB: NOTIFICATIONS */}
+          {activeTab === 'notifications' && (
+            <div className="space-y-8">
+              <header className="mb-12 flex justify-between items-end">
+                <div>
+                  <h2 className="text-3xl font-black tracking-tighter text-primary flex items-center gap-3">
+                    <BellRing /> Gestão de Notificações
+                  </h2>
+                  <p className="text-slate-500 font-bold">Edite os templates de mensagens disparadas automaticamente.</p>
+                </div>
+                <Button onClick={handleSaveSettings} isLoading={savingSettings} className="rounded-2xl px-8 py-4"><Save className="mr-2" /> Salvar Tudo</Button>
+              </header>
+
+              <div className="grid grid-cols-1 gap-8">
+                {/* Email Boas Vindas */}
+                <Card className="p-8 bg-white rounded-[2.5rem] shadow-sm">
+                  <h3 className="text-lg font-black mb-6 flex items-center gap-3 text-secondary"><Mail /> E-mail de Boas-Vindas (Hotmart)</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">Assunto do E-mail</label>
+                      <input 
+                        type="text" 
+                        value={settings.email_welcome_subject || ''}
+                        onChange={e => setSettings({...settings, email_welcome_subject: e.target.value})}
+                        className="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 font-bold outline-none"
+                      />
                     </div>
-                  </td>
-                  <td className="px-8 py-6">
-                    <Badge variant={p.role === 'admin' ? 'success' : 'surface'} className="uppercase font-black text-[9px]">
-                      {p.role || 'user'}
-                    </Badge>
-                  </td>
-                  <td className="px-8 py-6">
-                    <div className={cn(
-                      "inline-flex items-center gap-2 px-3 py-1.5 rounded-full font-black text-[9px] uppercase",
-                      p.active !== false ? "bg-success/5 text-success" : "bg-error/5 text-error"
-                    )}>
-                      <div className={cn("w-1.5 h-1.5 rounded-full", p.active !== false ? "bg-success" : "bg-error")} />
-                      {p.active !== false ? 'Permitido' : 'Bloqueado'}
+                    <div>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">Corpo HTML</label>
+                      <textarea 
+                        rows={8}
+                        value={settings.email_welcome_body || ''}
+                        onChange={e => setSettings({...settings, email_welcome_body: e.target.value})}
+                        className="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 font-mono text-xs outline-none"
+                      />
                     </div>
-                  </td>
-                  <td className="px-8 py-6">
-                    <p className="text-xs font-black text-slate-900">{p.pets ? p.pets[0]?.count : 0}</p>
-                  </td>
-                  <td className="px-8 py-6">
+                  </div>
+                </Card>
+
+                {/* Email Agendamento */}
+                <Card className="p-8 bg-white rounded-[2.5rem] shadow-sm">
+                  <h3 className="text-lg font-black mb-6 flex items-center gap-3 text-primary"><Clock /> E-mail Lembrete (1 dia antes)</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">Assunto</label>
+                      <input 
+                        type="text" 
+                        value={settings.email_appointment_subject || ''}
+                        onChange={e => setSettings({...settings, email_appointment_subject: e.target.value})}
+                        className="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 font-bold outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">Mensagem (use {"{{petName}}"} e {"{{eventTitle}}"} como variáveis)</label>
+                      <textarea 
+                        rows={4}
+                        value={settings.email_appointment_body || ''}
+                        onChange={e => setSettings({...settings, email_appointment_body: e.target.value})}
+                        className="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 font-bold outline-none"
+                      />
+                    </div>
+                  </div>
+                </Card>
+
+                {/* Push Agendamento */}
+                <Card className="p-8 bg-white rounded-[2.5rem] shadow-sm">
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-lg font-black flex items-center gap-3 text-warning"><BellRing /> Notificação Push (Manual / Lembrete)</h3>
                     <Button 
-                      onClick={() => toggleUserStatus(p.id, p.active !== false)}
-                      variant="ghost"
-                      className={cn(
-                        "font-black text-[9px] uppercase tracking-widest",
-                        p.active !== false ? "text-error" : "text-success"
-                      )}
+                      size="sm" 
+                      onClick={async () => {
+                        if (!settings.push_appointment_body) return alert('Digite uma mensagem primeiro.');
+                        if (!window.confirm('Enviar esta notificação para TODOS os usuários agora?')) return;
+                        try {
+                          const res = await fetch('/api/admin/send-push', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ message: settings.push_appointment_body })
+                          });
+                          if (!res.ok) throw new Error('Falha ao enviar');
+                          alert('Notificação enviada com sucesso!');
+                        } catch (err: any) {
+                          alert(err.message);
+                        }
+                      }}
+                      className="bg-warning text-on-warning rounded-xl px-6"
                     >
-                      {p.active !== false ? 'Desativar' : 'Reativar'}
+                      Enviar para Todos Agora
                     </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">Texto do Push (usado também como template para o Cron)</label>
+                    <textarea 
+                      rows={3}
+                      value={settings.push_appointment_body || ''}
+                      onChange={e => setSettings({...settings, push_appointment_body: e.target.value})}
+                      className="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 font-bold outline-none"
+                    />
+                  </div>
+                </Card>
+              </div>
+            </div>
+          )}
 
-      {/* --- MODAL DE CRIAÇÃO --- */}
+          {/* TAB: SETTINGS */}
+          {activeTab === 'settings' && (
+            <div className="space-y-8">
+              <header className="mb-12">
+                <h2 className="text-3xl font-black tracking-tighter flex items-center gap-3"><SettingsIcon /> Configurações Gerais</h2>
+                <p className="text-slate-500 font-bold">Segurança e recuperação de conta.</p>
+              </header>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* E-mail de Recuperação */}
+                <Card className="p-8 bg-white rounded-[2.5rem] shadow-sm space-y-6">
+                  <h3 className="text-lg font-black flex items-center gap-3"><Mail className="text-primary" /> Recuperação</h3>
+                  <div>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">E-mail para suporte/recuperação</label>
+                    <input 
+                      type="email" 
+                      value={settings.recovery_email || ''}
+                      onChange={e => setSettings({...settings, recovery_email: e.target.value})}
+                      className="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 font-bold outline-none mb-4"
+                    />
+                    <Button onClick={handleSaveSettings} isLoading={savingSettings} className="w-full rounded-2xl">Atualizar E-mail</Button>
+                  </div>
+                </Card>
+
+                {/* Trocar Senha Admin */}
+                <Card className="p-8 bg-white rounded-[2.5rem] shadow-sm space-y-6">
+                  <h3 className="text-lg font-black flex items-center gap-3"><Key className="text-warning" /> Senha Administrativa</h3>
+                  <div>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">Nova Senha</label>
+                    <input 
+                      type="password" 
+                      value={newAdminPass}
+                      onChange={e => setNewAdminPass(e.target.value)}
+                      placeholder="Mínimo 6 caracteres"
+                      className="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 font-bold outline-none mb-4"
+                    />
+                    <Button onClick={handleUpdateAdminPass} className="w-full rounded-2xl bg-warning text-on-warning border-none">Trocar Senha Agora</Button>
+                  </div>
+                </Card>
+              </div>
+            </div>
+          )}
+
+        </div>
+      </main>
+
+      {/* --- MODAL CRIAÇÃO USUÁRIO --- */}
       <AnimatePresence>
         {isCreateModalOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
-            <motion.div 
-              initial={{ opacity: 0 }} 
-              animate={{ opacity: 1 }} 
-              exit={{ opacity: 0 }}
-              onClick={() => setIsCreateModalOpen(false)}
-              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
-            />
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl p-10"
-            >
-              <h3 className="text-3xl font-black tracking-tighter mb-2">Novo Usuário</h3>
-              <p className="text-slate-500 font-bold mb-8 text-sm">Preencha os dados para criar um acesso manual.</p>
-
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsCreateModalOpen(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
+            <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="relative w-full max-w-md bg-white rounded-[2.5rem] p-10 shadow-2xl">
+              <h3 className="text-3xl font-black mb-8">Novo Usuário</h3>
               <form onSubmit={handleCreateUser} className="space-y-4">
-                <div>
-                  <label className="text-[10px] font-black uppercase tracking-widest ml-4 mb-2 block text-slate-400">Nome Completo</label>
-                  <input 
-                    type="text" required
-                    className="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 outline-none font-bold text-sm focus:ring-4 focus:ring-primary/10 transition-all"
-                    placeholder="Ex: João Silva"
-                    value={newUser.name}
-                    onChange={e => setNewUser({...newUser, name: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-black uppercase tracking-widest ml-4 mb-2 block text-slate-400">Email de Acesso</label>
-                  <input 
-                    type="email" required
-                    className="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 outline-none font-bold text-sm focus:ring-4 focus:ring-primary/10 transition-all"
-                    placeholder="joao@example.com"
-                    value={newUser.email}
-                    onChange={e => setNewUser({...newUser, email: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-black uppercase tracking-widest ml-4 mb-2 block text-slate-400">Senha Temporária</label>
-                  <input 
-                    type="password" required
-                    className="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 outline-none font-bold text-sm focus:ring-4 focus:ring-primary/10 transition-all"
-                    placeholder="********"
-                    value={newUser.password}
-                    onChange={e => setNewUser({...newUser, password: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-black uppercase tracking-widest ml-4 mb-2 block text-slate-400">Cargo / Role</label>
-                  <select 
-                    className="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 outline-none font-bold text-sm focus:ring-4 focus:ring-primary/10 transition-all appearance-none"
-                    value={newUser.role}
-                    onChange={e => setNewUser({...newUser, role: e.target.value})}
-                  >
-                    <option value="user">Usuário (Tutor)</option>
-                    <option value="admin">Administrador</option>
-                  </select>
-                </div>
-
-                <div className="pt-4 flex gap-3">
-                  <Button 
-                    type="button" 
-                    variant="ghost" 
-                    className="flex-1 py-4 rounded-2xl font-black"
-                    onClick={() => setIsCreateModalOpen(false)}
-                  >
-                    Descartar
-                  </Button>
-                  <Button 
-                    type="submit" 
-                    disabled={creating}
-                    className="flex-1 py-4 bg-primary text-white rounded-2xl font-black shadow-lg shadow-primary/20"
-                  >
-                    {creating ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'Criar Conta'}
-                  </Button>
+                <input type="text" placeholder="Nome" required className="w-full bg-slate-50 rounded-2xl px-6 py-4 outline-none font-bold" value={newUser.name} onChange={e => setNewUser({...newUser, name: e.target.value})} />
+                <input type="email" placeholder="E-mail" required className="w-full bg-slate-50 rounded-2xl px-6 py-4 outline-none font-bold" value={newUser.email} onChange={e => setNewUser({...newUser, email: e.target.value})} />
+                <input type="password" placeholder="Senha (Mantenha padrao)" className="w-full bg-slate-50 rounded-2xl px-6 py-4 outline-none font-bold" value={newUser.password} onChange={e => setNewUser({...newUser, password: e.target.value})} />
+                <select className="w-full bg-slate-50 rounded-2xl px-6 py-4 outline-none font-bold appearance-none" value={newUser.role} onChange={e => setNewUser({...newUser, role: e.target.value})}>
+                  <option value="user">Tutor</option>
+                  <option value="admin">Administrador</option>
+                </select>
+                <div className="pt-4 flex gap-4">
+                  <Button type="button" variant="ghost" className="flex-1" onClick={() => setIsCreateModalOpen(false)}>Cancelar</Button>
+                  <Button type="submit" isLoading={creating} className="flex-1">Criar</Button>
                 </div>
               </form>
             </motion.div>
           </div>
         )}
       </AnimatePresence>
-    </AdminLayout>
+    </div>
   );
 };
 

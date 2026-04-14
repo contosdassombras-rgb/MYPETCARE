@@ -3,17 +3,31 @@ import { createClient } from '@supabase/supabase-js';
 // Configurações do Supabase (Vercel Env Vars)
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const hotmartSecret = process.env.HOTMART_SECRET; // Token configurado na Hotmart
 
 const supabase = createClient(supabaseUrl!, supabaseServiceKey!);
 
 export default async function handler(req: any, res: any) {
+  // 1. Validar Método
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return res.status(405).json({ error: 'Method not allowed. Use POST.' });
   }
 
   try {
     const body = req.body;
-    console.log("HOTMART WEBHOOK RECEIVED:", JSON.stringify(body, null, 2));
+    const headers = req.headers;
+
+    console.log("--- HOTMART WEBHOOK START ---");
+    console.log("HEADERS:", JSON.stringify(headers, null, 2));
+    console.log("BODY:", JSON.stringify(body, null, 2));
+
+    // 2. Validar Token de Segurança da Hotmart
+    const receivedToken = headers['x-hotmart-token'];
+    if (hotmartSecret && receivedToken !== hotmartSecret) {
+      console.warn("INVALID HOTMART TOKEN RECEIVED");
+      // Retornamos 200 mesmo assim para evitar retentativas infinitas de um atacante ou erro de config
+      return res.status(200).json({ status: 'error', message: 'Invalid token' });
+    }
 
     // Extração básica do payload Hotmart V2
     const event = body.event;
@@ -25,13 +39,13 @@ export default async function handler(req: any, res: any) {
     const priceCurrency = body.data?.purchase?.price?.currency_code;
 
     if (!buyerEmail) {
-      console.error("No buyer email found in webhook payload.");
+      console.warn("Ignoring event: No buyer email found");
       return res.status(200).json({ status: 'ignored', message: 'No email' });
     }
 
-    // 1. Mapeamento de Status
+    // 3. Mapeamento de Status
     let isActive = false;
-    const status = event.toLowerCase();
+    const status = (event || '').toLowerCase();
 
     // 🟢 ATIVAR ACESSO
     if (['purchase_approved', 'purchase_completed', 'subscription_renewal_approved'].includes(status)) {
@@ -42,10 +56,10 @@ export default async function handler(req: any, res: any) {
       isActive = false;
     }
 
-    console.log(`ACTION: ${isActive ? 'ACTIVATE' : 'DEACTIVATE'} for ${buyerEmail} (Event: ${event})`);
+    console.log(`ACTION: ${isActive ? 'ACTIVATE' : 'DEACTIVATE'} | EMAIL: ${buyerEmail} | EVENT: ${event}`);
 
-    // 2. Registrar evento no banco (Log)
-    await supabase.from('hotmart_events').insert([{
+    // 4. Registrar evento no banco (Log)
+    const { error: logError } = await supabase.from('hotmart_events').insert([{
       event_type: event,
       buyer_email: buyerEmail,
       buyer_name: buyerName,
@@ -57,24 +71,29 @@ export default async function handler(req: any, res: any) {
       payload: body
     }]);
 
-    // 3. Atualizar ou Criar usuário no profiles
-    // Procuramos pelo email
-    const { data: profile } = await supabase
+    if (logError) console.error("Database Log Error:", logError);
+
+    // 5. Atualizar ou Criar usuário no profiles
+    const { data: profile, error: fetchError } = await supabase
       .from('profiles')
       .select('id')
       .eq('email', buyerEmail)
       .maybeSingle();
 
+    if (fetchError) console.error("Database Fetch Error:", fetchError);
+
     if (profile) {
       // Atualiza usuário existente
       await supabase
         .from('profiles')
-        .update({ active: isActive, name: buyerName || undefined })
+        .update({ 
+          active: isActive, 
+          name: buyerName || undefined,
+          email: buyerEmail // Garante que a coluna email esteja preenchida
+        })
         .eq('id', profile.id);
     } else if (isActive) {
       // Cria novo usuário se foi aprovado e não existe
-      // NOTA: Isso cria apenas o PERFIL. O usuário precisará se cadastrar com esse email 
-      // ou ser criado via Auth Admin. Para automação total, poderíamos criar o Auth User aqui.
       await supabase
         .from('profiles')
         .insert([{
@@ -85,9 +104,20 @@ export default async function handler(req: any, res: any) {
         }]);
     }
 
-    return res.status(200).json({ status: 'success', event, email: buyerEmail });
+    console.log("--- HOTMART WEBHOOK SUCCESS ---");
+    return res.status(200).json({ 
+      status: 'success', 
+      processed_at: new Date().toISOString(),
+      event, 
+      email: buyerEmail 
+    });
+
   } catch (error: any) {
-    console.error("WEBHOOK ERROR:", error);
-    return res.status(200).json({ status: 'error', message: error.message });
+    console.error("CRITICAL WEBHOOK ERROR:", error.message);
+    // Retornamos 200 para a Hotmart não ficar repetindo o erro
+    return res.status(200).json({ 
+      status: 'handled_error', 
+      message: error.message 
+    });
   }
 }

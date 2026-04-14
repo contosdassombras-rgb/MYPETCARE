@@ -28,13 +28,13 @@ interface AdminUserProfile {
 
 export const Admin: React.FC = () => {
   const { t } = useLanguage();
-  const { isAdmin, loading: contextLoading } = useUser();
+  const { isAdmin, loading } = useUser();
   const [users, setUsers] = useState<AdminUserProfile[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [usersLoading, setUsersLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings'>('dashboard');
 
-  if (contextLoading) {
+  if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-surface gap-4">
         <Loader2 className="w-10 h-10 animate-spin text-primary opacity-20" />
@@ -59,7 +59,7 @@ export const Admin: React.FC = () => {
 
   const fetchUsers = async () => {
     try {
-      setLoading(true);
+      setUsersLoading(true);
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -70,7 +70,7 @@ export const Admin: React.FC = () => {
     } catch (err) {
       console.error('Error fetching users:', err);
     } finally {
-      setLoading(false);
+      setUsersLoading(false);
     }
   };
 

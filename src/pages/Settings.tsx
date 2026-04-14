@@ -18,10 +18,28 @@ export const Settings: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showIOSModal, setShowIOSModal] = useState(false);
   
-  const [activeTab, setActiveTab] = useState<'profile' | 'notifications'>(() => {
+  const [activeTab, setActiveTab] = useState<'profile' | 'notifications' | 'app'>(() => {
     const params = new URLSearchParams(window.location.search);
-    return (params.get('tab') as 'profile' | 'notifications') || 'profile';
+    const tab = params.get('tab');
+    if (tab === 'profile') return 'profile';
+    if (tab === 'notifications') return 'notifications';
+    return 'profile';
   });
+
+  const nameInputRef = useRef<HTMLInputElement>(null);
+
+  // Sync activeTab with URL params
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    if (tab === 'profile') {
+      setActiveTab('profile');
+      // Auto focus name field if specifically coming to complete profile
+      setTimeout(() => nameInputRef.current?.focus(), 300);
+    } else if (tab === 'notifications') {
+      setActiveTab('notifications');
+    }
+  }, [window.location.search]);
 
   const [formData, setFormData] = useState({
     name: user.name || '',
@@ -103,183 +121,237 @@ export const Settings: React.FC = () => {
         <p className="text-on-surface-variant mt-2 font-medium opacity-60 uppercase tracking-widest text-xs">{t('manage_account_description')}</p>
       </header>
 
+      {/* Tab Switcher */}
+      <div className="flex gap-2 p-2 mb-12 bg-surface-container-low/50 rounded-3xl mx-4">
+        <button 
+          onClick={() => setActiveTab('profile')}
+          className={cn(
+            "flex-1 py-4 rounded-2xl font-black transition-all",
+            activeTab === 'profile' ? "bg-white shadow-lg text-primary scale-[1.02]" : "text-on-surface-variant opacity-40 hover:opacity-100"
+          )}
+        >
+          {t('profile')}
+        </button>
+        <button 
+          onClick={() => setActiveTab('notifications')}
+          className={cn(
+            "flex-1 py-4 rounded-2xl font-black transition-all",
+            activeTab === 'notifications' ? "bg-white shadow-lg text-primary scale-[1.02]" : "text-on-surface-variant opacity-40 hover:opacity-100"
+          )}
+        >
+          {t('notifications')}
+        </button>
+        <button 
+          onClick={() => setActiveTab('app')}
+          className={cn(
+            "flex-1 py-4 rounded-2xl font-black transition-all",
+            activeTab === 'app' ? "bg-white shadow-lg text-primary scale-[1.02]" : "text-on-surface-variant opacity-40 hover:opacity-100"
+          )}
+        >
+          {t('app_settings')}
+        </button>
+      </div>
+
       <div className="space-y-12">
-        {/* Tutor Profile Section */}
-        <section>
-          <div className="flex items-center justify-between px-4 mb-6">
-            <h2 className="text-2xl font-black font-headline tracking-tighter">
-              {t('tutor_profile')}
-            </h2>
-          </div>
+        <AnimatePresence mode="wait">
+          {activeTab === 'profile' && (
+            <motion.section
+              key="profile"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+            >
+              <div className="flex items-center justify-between px-4 mb-6">
+                <h2 className="text-2xl font-black font-headline tracking-tighter">
+                  {t('tutor_profile')}
+                </h2>
+              </div>
 
-          <Card className="p-10 rounded-[3rem] space-y-10 border-none bg-surface-container-low/30 shadow-none">
-            <div className="flex flex-col items-center gap-6">
-              <div className="relative group">
-                <div className="w-32 h-32 rounded-[2.5rem] overflow-hidden border-4 border-primary shadow-2xl bg-surface-container-low transition-transform group-hover:scale-105 duration-500">
-                  {user.photo ? (
-                    <img src={user.photo} alt={user.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-on-surface-variant opacity-20">
-                      <User className="w-16 h-16" />
+              <Card className="p-10 rounded-[3rem] space-y-10 border-none bg-surface-container-low/30 shadow-none">
+                <div className="flex flex-col items-center gap-6">
+                  <div className="relative group">
+                    <div className="w-32 h-32 rounded-[2.5rem] overflow-hidden border-4 border-primary shadow-2xl bg-surface-container-low transition-transform group-hover:scale-105 duration-500">
+                      {user.photo ? (
+                        <img src={user.photo} alt={user.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-on-surface-variant opacity-20">
+                          <User className="w-16 h-16" />
+                        </div>
+                      )}
+                      <button 
+                        onClick={() => fileInputRef.current?.click()}
+                        className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <Camera className="w-8 h-8 text-white" />
+                      </button>
                     </div>
+                    <input 
+                      type="file" 
+                      ref={fileInputRef} 
+                      onChange={handlePhotoUpload} 
+                      accept="image/*" 
+                      className="hidden" 
+                    />
+                  </div>
+
+                  {user.photo && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={resetPhoto}
+                      className="text-error font-black opacity-60 hover:opacity-100 hover:bg-error/10"
+                    >
+                      <Trash2 className="w-4 h-4 mr-1" />
+                      {t('delete')}
+                    </Button>
                   )}
-                  <button 
-                    onClick={() => fileInputRef.current?.click()}
-                    className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                </div>
+
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-[0.2em] ml-2">
+                      {t('full_name')}
+                    </label>
+                    <input
+                      ref={nameInputRef}
+                      type="text"
+                      value={formData.name}
+                      onChange={e => setFormData({ ...formData, name: e.target.value })}
+                      className="w-full px-6 py-5 bg-surface-container-low border-none rounded-2xl focus:ring-4 focus:ring-primary/20 outline-none transition-all font-bold text-lg"
+                      placeholder="Seu nome"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-[0.2em] ml-2">
+                      WhatsApp
+                    </label>
+                    <input
+                      type="tel"
+                      value={formData.phone}
+                      onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                      className="w-full px-6 py-5 bg-surface-container-low border-none rounded-2xl focus:ring-4 focus:ring-primary/20 outline-none transition-all font-bold text-lg"
+                      placeholder="(00) 00000-0000"
+                    />
+                  </div>
+                  
+                  <Button 
+                    onClick={handleSaveProfile}
+                    className="w-full py-6 rounded-2xl text-lg font-black tracking-tighter shadow-xl shadow-primary/20 mt-4"
                   >
-                    <Camera className="w-8 h-8 text-white" />
-                  </button>
+                    {t('save')}
+                  </Button>
                 </div>
-                <input 
-                  type="file" 
-                  ref={fileInputRef} 
-                  onChange={handlePhotoUpload} 
-                  accept="image/*" 
-                  className="hidden" 
-                />
-              </div>
+              </Card>
+            </motion.section>
+          )}
 
-              {user.photo && (
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={resetPhoto}
-                  className="text-error font-black opacity-60 hover:opacity-100 hover:bg-error/10"
+          {activeTab === 'notifications' && (
+            <motion.section 
+              key="notifications"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              className="space-y-6"
+            >
+              <h2 className="text-2xl font-black font-headline tracking-tighter px-4">
+                {t('notifications')}
+              </h2>
+              <Card className="p-2 overflow-hidden border-none bg-surface-container-low/30 shadow-none rounded-[2.5rem]">
+                <div className="flex items-center justify-between p-8 border-b border-surface-container-high/20">
+                  <div className="flex items-center gap-6">
+                    <div className="p-4 rounded-2xl bg-surface-container-low text-primary shadow-sm">
+                      <Smartphone className="w-7 h-7" />
+                    </div>
+                    <div>
+                      <span className="font-black text-on-surface text-lg leading-tight">{t('push_notifications')}</span>
+                      <p className="text-xs text-on-surface-variant opacity-60 font-medium">Alertas no seu dispositivo</p>
+                    </div>
+                  </div>
+                  <Toggle enabled={user.pushEnabled} onToggle={handlePushToggle} />
+                </div>
+                <div className="flex items-center justify-between p-8">
+                  <div className="flex items-center gap-6">
+                    <div className="p-4 rounded-2xl bg-surface-container-low text-primary shadow-sm">
+                      <Mail className="w-7 h-7" />
+                    </div>
+                    <div>
+                      <span className="font-black text-on-surface text-lg leading-tight">{t('email_reminders')}</span>
+                      <p className="text-xs text-on-surface-variant opacity-60 font-medium">Lembretes por e-mail</p>
+                    </div>
+                  </div>
+                  <Toggle enabled={user.emailEnabled} onToggle={handleEmailToggle} />
+                </div>
+              </Card>
+            </motion.section>
+          )}
+
+          {activeTab === 'app' && (
+            <motion.section 
+              key="app"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              className="space-y-6"
+            >
+              <h2 className="text-2xl font-black font-headline tracking-tighter px-4">
+                {t('app_settings')}
+              </h2>
+              <Card className="p-2 overflow-hidden border-none bg-surface-container-low/30 shadow-none rounded-[2.5rem]">
+                <button 
+                  onClick={handleChangeLanguage}
+                  className="w-full flex items-center justify-between p-8 border-b border-surface-container-high/20 hover:bg-surface-container-low transition-colors text-left group"
                 >
-                  <Trash2 className="w-4 h-4 mr-1" />
-                  {t('delete')}
-                </Button>
-              )}
-            </div>
+                  <div className="flex items-center gap-6">
+                    <div className="p-4 rounded-2xl bg-surface-container-low text-primary shadow-sm">
+                      <Globe className="w-7 h-7" />
+                    </div>
+                    <div>
+                      <span className="font-black text-on-surface text-lg leading-tight">{t('choose_language')}</span>
+                      <p className="text-xs text-on-surface-variant font-bold uppercase tracking-widest opacity-40 mt-1">{langLabel[language || 'pt']}</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-6 h-6 text-on-surface-variant opacity-30 group-hover:translate-x-1 transition-transform" />
+                </button>
+                
+                <button 
+                  onClick={handleInstallPWA}
+                  className="w-full flex items-center justify-between p-8 hover:bg-primary/5 transition-colors text-left group"
+                >
+                  <div className="flex items-center gap-6">
+                    <div className="p-4 rounded-2xl bg-primary text-on-primary shadow-xl shadow-primary/20">
+                      <Download className="w-7 h-7" />
+                    </div>
+                    <div>
+                      <span className="font-black text-on-surface text-lg leading-tight">{t('install_mypetcare')}</span>
+                      <p className="text-xs text-on-surface-variant font-bold uppercase tracking-widest opacity-40 mt-1">Acesso Rápido PWA</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-6 h-6 text-on-surface-variant opacity-30 group-hover:translate-x-1 transition-transform" />
+                </button>
+              </Card>
 
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-[0.2em] ml-2">
-                  {t('full_name')}
-                </label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={e => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-6 py-5 bg-surface-container-low border-none rounded-2xl focus:ring-4 focus:ring-primary/20 outline-none transition-all font-bold text-lg"
-                  placeholder="Seu nome"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-[0.2em] ml-2">
-                  WhatsApp
-                </label>
-                <input
-                  type="tel"
-                  value={formData.phone}
-                  onChange={e => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full px-6 py-5 bg-surface-container-low border-none rounded-2xl focus:ring-4 focus:ring-primary/20 outline-none transition-all font-bold text-lg"
-                  placeholder="(00) 00000-0000"
-                />
-              </div>
-              
-              <Button 
-                onClick={handleSaveProfile}
-                className="w-full py-6 rounded-2xl text-lg font-black tracking-tighter shadow-xl shadow-primary/20 mt-4"
-              >
-                {t('save')}
-              </Button>
-            </div>
-          </Card>
-        </section>
-
-        {/* Notifications */}
-        <section className="space-y-6">
-          <h2 className="text-2xl font-black font-headline tracking-tighter px-4">
-            {t('notifications')}
-          </h2>
-          <Card className="p-2 overflow-hidden border-none bg-surface-container-low/30 shadow-none rounded-[2.5rem]">
-            <div className="flex items-center justify-between p-8 border-b border-surface-container-high/20">
-              <div className="flex items-center gap-6">
-                <div className="p-4 rounded-2xl bg-surface-container-low text-primary shadow-sm">
-                  <Smartphone className="w-7 h-7" />
-                </div>
-                <div>
-                  <span className="font-black text-on-surface text-lg leading-tight">{t('push_notifications')}</span>
-                  <p className="text-xs text-on-surface-variant opacity-60 font-medium">Alertas no seu dispositivo</p>
-                </div>
-              </div>
-              <Toggle enabled={user.pushEnabled} onToggle={handlePushToggle} />
-            </div>
-            <div className="flex items-center justify-between p-8">
-              <div className="flex items-center gap-6">
-                <div className="p-4 rounded-2xl bg-surface-container-low text-primary shadow-sm">
-                  <Mail className="w-7 h-7" />
-                </div>
-                <div>
-                  <span className="font-black text-on-surface text-lg leading-tight">{t('email_reminders')}</span>
-                  <p className="text-xs text-on-surface-variant opacity-60 font-medium">Lembretes por e-mail</p>
-                </div>
-              </div>
-              <Toggle enabled={user.emailEnabled} onToggle={handleEmailToggle} />
-            </div>
-          </Card>
-        </section>
-
-        {/* App Settings */}
-        <section className="space-y-6">
-          <h2 className="text-2xl font-black font-headline tracking-tighter px-4">
-            {t('app_settings')}
-          </h2>
-          <Card className="p-2 overflow-hidden border-none bg-surface-container-low/30 shadow-none rounded-[2.5rem]">
-            <button 
-              onClick={handleChangeLanguage}
-              className="w-full flex items-center justify-between p-8 border-b border-surface-container-high/20 hover:bg-surface-container-low transition-colors text-left group"
-            >
-              <div className="flex items-center gap-6">
-                <div className="p-4 rounded-2xl bg-surface-container-low text-primary shadow-sm">
-                  <Globe className="w-7 h-7" />
-                </div>
-                <div>
-                  <span className="font-black text-on-surface text-lg leading-tight">{t('choose_language')}</span>
-                  <p className="text-xs text-on-surface-variant font-bold uppercase tracking-widest opacity-40 mt-1">{langLabel[language || 'pt']}</p>
-                </div>
-              </div>
-              <ChevronRight className="w-6 h-6 text-on-surface-variant opacity-30 group-hover:translate-x-1 transition-transform" />
-            </button>
-            
-            <button 
-              onClick={handleInstallPWA}
-              className="w-full flex items-center justify-between p-8 hover:bg-primary/5 transition-colors text-left group"
-            >
-              <div className="flex items-center gap-6">
-                <div className="p-4 rounded-2xl bg-primary text-on-primary shadow-xl shadow-primary/20">
-                  <Download className="w-7 h-7" />
-                </div>
-                <div>
-                  <span className="font-black text-on-surface text-lg leading-tight">{t('install_mypetcare')}</span>
-                  <p className="text-xs text-on-surface-variant font-bold uppercase tracking-widest opacity-40 mt-1">Acesso Rápido PWA</p>
-                </div>
-              </div>
-              <ChevronRight className="w-6 h-6 text-on-surface-variant opacity-30 group-hover:translate-x-1 transition-transform" />
-            </button>
-          </Card>
-        </section>
-
-        <section className="space-y-6">
-          <h2 className="text-2xl font-black font-headline tracking-tighter px-4">
-            {t('support_settings')}
-          </h2>
-          <Card className="p-2 overflow-hidden border-none bg-surface-container-low/30 shadow-none rounded-[2.5rem]">
-            <button 
-              onClick={signOut}
-              className="w-full flex items-center justify-between p-8 hover:bg-error/5 transition-colors text-left group"
-            >
-              <div className="flex items-center gap-6">
-                <div className="p-4 rounded-2xl bg-error/10 text-error">
-                  <LogOut className="w-7 h-7" />
-                </div>
-                <span className="font-black text-error text-lg leading-tight">{t('sign_out')}</span>
-              </div>
-              <ChevronRight className="w-6 h-6 text-on-surface-variant opacity-30 group-hover:translate-x-1 transition-transform" />
-            </button>
-          </Card>
-        </section>
+              <section className="space-y-6 !mt-12">
+                <h2 className="text-2xl font-black font-headline tracking-tighter px-4">
+                  {t('support_settings')}
+                </h2>
+                <Card className="p-2 overflow-hidden border-none bg-surface-container-low/30 shadow-none rounded-[2.5rem]">
+                  <button 
+                    onClick={signOut}
+                    className="w-full flex items-center justify-between p-8 hover:bg-error/5 transition-colors text-left group"
+                  >
+                    <div className="flex items-center gap-6">
+                      <div className="p-4 rounded-2xl bg-error/10 text-error">
+                        <LogOut className="w-7 h-7" />
+                      </div>
+                      <span className="font-black text-error text-lg leading-tight">{t('sign_out')}</span>
+                    </div>
+                    <ChevronRight className="w-6 h-6 text-on-surface-variant opacity-30 group-hover:translate-x-1 transition-transform" />
+                  </button>
+                </Card>
+              </section>
+            </motion.section>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* iOS Install Instruction Modal */}
@@ -365,4 +437,3 @@ export const Settings: React.FC = () => {
     </div>
   );
 };
-

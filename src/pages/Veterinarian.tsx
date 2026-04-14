@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import { Phone, Mail, User, Plus, X, Trash2, Building2, ShoppingBag, Globe, MapPin } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabaseClient';
 
 interface Contact {
   id: string;

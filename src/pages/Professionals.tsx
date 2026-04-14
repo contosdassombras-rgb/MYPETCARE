@@ -7,7 +7,7 @@ import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Input, TextArea } from '../components/ui/Input';
 import { Badge } from '../components/ui/Badge';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabaseClient';
 
 interface Professional {
   id: string;

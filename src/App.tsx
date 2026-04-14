@@ -16,7 +16,7 @@ import { Settings } from './pages/Settings';
 import { Veterinarian } from './pages/Veterinarian';
 import { Reports } from './pages/Reports';
 import { Symptoms } from './pages/Symptoms';
-import { Admin } from './pages/Admin';
+import Admin from './pages/Admin';
 import { Auth } from './pages/Auth';
 import { supabase } from './lib/supabaseClient';
 import { Session } from '@supabase/supabase-js';

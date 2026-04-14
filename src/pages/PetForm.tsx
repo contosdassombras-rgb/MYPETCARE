@@ -8,7 +8,7 @@ import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Input, TextArea } from '../components/ui/Input';
 import { uploadFile } from '../lib/storage';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabaseClient';
 
 export const PetForm: React.FC = () => {
   const { id } = useParams();

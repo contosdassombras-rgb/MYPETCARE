@@ -68,7 +68,7 @@ export const PetForm: React.FC = () => {
         petId = await addPet({
           ...formData,
           weight: weightVal,
-          photo: '', // Placeholder
+          photo: formData.photo || '', 
         } as Omit<Pet, 'id' | 'events' | 'history'>, userId) || undefined;
         
         if (!petId) throw new Error('Falha ao criar pet');
@@ -78,13 +78,15 @@ export const PetForm: React.FC = () => {
       if (formData.photo?.startsWith('data:')) {
         const photoPath = `${userId}/${petId}/profile_${Date.now()}.jpg`;
         finalPhotoUrl = await uploadFile(formData.photo, photoPath);
+        // Atualizamos o pet com a URL real da foto
+        await updatePet(petId, { photo: finalPhotoUrl });
       }
 
       // 3. Processamento de Histórico (Peso/Comida)
+      // Nota: addHistory já atualiza o estado local e o banco
       if (existingPet) {
         if (weightVal !== existingPet.weight) {
-          finalHistory.push({
-            id: Math.random().toString(36).substring(2, 11),
+          await addHistory(petId, {
             type: 'weight',
             title: t('weight_updated'),
             date: new Date().toISOString().split('T')[0],
@@ -93,8 +95,7 @@ export const PetForm: React.FC = () => {
           });
         }
         if (formData.foodType !== existingPet.foodType) {
-          finalHistory.push({
-            id: Math.random().toString(36).substring(2, 11),
+          await addHistory(petId, {
             type: 'food',
             title: t('food_updated'),
             date: new Date().toISOString().split('T')[0],
@@ -104,8 +105,7 @@ export const PetForm: React.FC = () => {
         }
       } else if (weightVal > 0) {
         // Registro inicial de peso para novos pets
-        finalHistory.push({
-          id: Math.random().toString(36).substring(2, 11),
+        await addHistory(petId, {
           type: 'weight',
           title: t('initial_weight') || 'Peso Inicial',
           date: new Date().toISOString().split('T')[0],
@@ -114,15 +114,14 @@ export const PetForm: React.FC = () => {
         });
       }
 
-      // 4. Upload de Documentos para o Storage
+      // 4. Upload de Documentos para o Storage e Banco
       for (const doc of documentFiles) {
         if (doc.url.startsWith('data:')) {
           const sanitizedName = sanitizeFilename(doc.name);
           const docPath = `${userId}/${petId}/documents/${Date.now()}_${sanitizedName}`;
           const uploadedUrl = await uploadFile(doc.url, docPath);
           
-          finalHistory.push({
-            id: Math.random().toString(36).substring(2, 11),
+          await addHistory(petId, {
             type: 'document',
             title: doc.name,
             date: new Date().toISOString().split('T')[0],
@@ -132,16 +131,21 @@ export const PetForm: React.FC = () => {
         }
       }
 
-      // 5. ATUALIZAÇÃO FINAL (Dados, Foto e Histórico Completo)
+      // 5. ATUALIZAÇÃO FINAL (Dados Gerais)
       await updatePet(petId, {
-        ...formData,
-        photo: finalPhotoUrl,
+        name: formData.name,
+        breed: formData.breed,
+        birthDate: formData.birthDate,
         weight: weightVal,
-        history: finalHistory
+        foodType: formData.foodType,
+        allergies: formData.allergies,
+        healthConditions: formData.healthConditions,
+        medications: formData.medications,
+        status: formData.status
       });
 
       // Feedback de sucesso e navegação
-      navigate('/');
+      navigate(`/pet/${petId}`);
     } catch (err) {
       console.error('Error saving pet:', err);
       alert('Erro ao salvar os dados. ' + (err instanceof Error ? err.message : 'Tente novamente.'));

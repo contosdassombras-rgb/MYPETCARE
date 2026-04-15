@@ -29,6 +29,38 @@ const BLOCK_EVENTS = [
   'subscription_cancellation',
 ];
 
+// ─── Extrair email do payload (múltiplos formatos Hotmart) ────────────
+function extractBuyerEmail(body: any): string {
+  // Formato padrão v2: body.data.buyer.email
+  if (body?.data?.buyer?.email) return body.data.buyer.email;
+  // Formato alternativo: body.data.email
+  if (body?.data?.email) return body.data.email;
+  // Formato flat: body.email
+  if (body?.email) return body.email;
+  // Formato antigo: body.data.buyer_email
+  if (body?.data?.buyer_email) return body.data.buyer_email;
+  // Formato webhook test: body.buyer?.email
+  if (body?.buyer?.email) return body.buyer.email;
+  return '';
+}
+
+function extractBuyerName(body: any): string {
+  if (body?.data?.buyer?.name) return body.data.buyer.name;
+  if (body?.data?.buyer?.first_name) {
+    const last = body.data.buyer.last_name || '';
+    return `${body.data.buyer.first_name} ${last}`.trim();
+  }
+  if (body?.data?.name) return body.data.name;
+  if (body?.data?.buyer_name) return body.data.buyer_name;
+  if (body?.buyer?.name) return body.buyer.name;
+  return '';
+}
+
+function extractEvent(body: any): string {
+  const raw = body?.event || body?.data?.event || '';
+  return raw.toLowerCase().trim();
+}
+
 // ─── Email de Boas-Vindas ─────────────────────────────────────────────
 async function sendWelcomeEmail(email: string, name: string): Promise<void> {
   if (!resendApiKey) {
@@ -95,6 +127,83 @@ async function sendWelcomeEmail(email: string, name: string): Promise<void> {
   }
 }
 
+// ─── Buscar ou criar usuário de forma robusta ─────────────────────────
+async function ensureUser(email: string, name: string): Promise<string | null> {
+  // 1. Tentar buscar na tabela profiles
+  try {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id, email, name, active')
+      .eq('email', email)
+      .maybeSingle();
+
+    if (profile) {
+      console.log(`[WEBHOOK] Perfil encontrado: id=${profile.id}`);
+      return profile.id;
+    }
+  } catch (err: any) {
+    console.error('[WEBHOOK] Erro ao buscar profile:', err?.message);
+  }
+
+  // 2. Não existe no profiles — tentar criar no auth
+  try {
+    const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
+      email,
+      password: TUTOR_DEFAULT_PASSWORD,
+      email_confirm: true,
+      user_metadata: { name }
+    });
+
+    if (newUser?.user) {
+      console.log(`[WEBHOOK] Usuário criado no auth: ${newUser.user.id}`);
+
+      // Inserir profile
+      await supabase.from('profiles').upsert({
+        id: newUser.user.id,
+        email,
+        name: name || '',
+        active: true,
+        role: 'user'
+      });
+
+      return newUser.user.id;
+    }
+
+    if (createError) {
+      console.warn(`[WEBHOOK] auth.admin.createUser falhou: ${createError.message}`);
+
+      // Se erro é "user already exists" ou "Database error", tentar buscar pelo auth listUsers
+      // Fallback: criar profile diretamente buscando pela API admin
+      try {
+        const { data: listData } = await supabase.auth.admin.listUsers();
+        const existingAuthUser = listData?.users?.find(
+          (u: any) => u.email?.toLowerCase() === email.toLowerCase()
+        );
+
+        if (existingAuthUser) {
+          console.log(`[WEBHOOK] Usuário já existe no auth: ${existingAuthUser.id} — inserindo profile.`);
+
+          await supabase.from('profiles').upsert({
+            id: existingAuthUser.id,
+            email,
+            name: name || '',
+            active: true,
+            role: 'user'
+          });
+
+          return existingAuthUser.id;
+        }
+      } catch (listErr: any) {
+        console.error('[WEBHOOK] Erro ao listar usuários auth:', listErr?.message);
+      }
+    }
+  } catch (err: any) {
+    console.error('[WEBHOOK] Exceção ao criar usuário:', err?.message);
+  }
+
+  return null;
+}
+
 // ─── Handler Principal ────────────────────────────────────────────────
 export default async function handler(req: any, res: any) {
   console.log('========== WEBHOOK RECEBIDO ==========');
@@ -106,28 +215,36 @@ export default async function handler(req: any, res: any) {
   try {
     const body = req.body || {};
 
-    // 1. Token Hotmart — tolerante
-    const hottok = body.hottok || '';
-    console.log(`[WEBHOOK] HOTMART TOKEN RECEBIDO: "${hottok ? hottok.substring(0, 10) + '...' : 'NENHUM'}"`);
-
-    if (hottok && hotmartSecret && hottok !== hotmartSecret) {
-      console.warn('[WEBHOOK] Token Hotmart não confere, mas continuando execução...');
-      // NÃO bloquear — apenas alertar
+    // LOG DO PAYLOAD COMPLETO (para debug)
+    console.log('[WEBHOOK] PAYLOAD KEYS:', Object.keys(body).join(', '));
+    console.log('[WEBHOOK] PAYLOAD.DATA KEYS:', body.data ? Object.keys(body.data).join(', ') : 'N/A');
+    if (body.data?.buyer) {
+      console.log('[WEBHOOK] PAYLOAD.DATA.BUYER KEYS:', Object.keys(body.data.buyer).join(', '));
     }
 
-    // 2. Extrair dados do payload
-    const event = (body.event || '').toLowerCase().trim();
-    const buyerEmail = body.data?.buyer?.email || '';
-    const buyerName = body.data?.buyer?.name || '';
-    const transactionId = body.data?.purchase?.transaction || '';
+    // 1. Token Hotmart — tolerante
+    const hottok = body.hottok || '';
+    if (hottok && hotmartSecret && hottok !== hotmartSecret) {
+      console.warn('[WEBHOOK] Token Hotmart não confere — continuando mesmo assim.');
+    } else if (!hottok) {
+      console.log('[WEBHOOK] Nenhum hottok recebido — OK, continuando.');
+    } else {
+      console.log('[WEBHOOK] Token Hotmart válido.');
+    }
+
+    // 2. Extrair dados com fallbacks
+    const event = extractEvent(body);
+    const buyerEmail = extractBuyerEmail(body);
+    const buyerName = extractBuyerName(body);
 
     console.log(`[WEBHOOK] EVENTO: "${event}"`);
-    console.log(`[WEBHOOK] EMAIL: "${buyerEmail}"`);
-    console.log(`[WEBHOOK] NOME: "${buyerName}"`);
+    console.log(`[WEBHOOK] EMAIL EXTRAIDO: "${buyerEmail}"`);
+    console.log(`[WEBHOOK] NOME EXTRAIDO: "${buyerName}"`);
 
     if (!buyerEmail) {
       console.log('[WEBHOOK] Sem email do comprador — ignorando.');
-      return res.status(200).json({ status: 'ignored', message: 'No buyer email' });
+      console.log('[WEBHOOK] Payload completo para debug:', JSON.stringify(body).substring(0, 500));
+      return res.status(200).json({ status: 'ignored', message: 'No buyer email found in payload' });
     }
 
     const normalizedEmail = buyerEmail.toLowerCase().trim();
@@ -136,7 +253,7 @@ export default async function handler(req: any, res: any) {
     const isApproval = APPROVAL_EVENTS.includes(event);
     const isBlock = BLOCK_EVENTS.includes(event);
 
-    console.log(`[WEBHOOK] APROVAÇÃO: ${isApproval} | BLOQUEIO: ${isBlock}`);
+    console.log(`[WEBHOOK] CLASSIFICAÇÃO — Aprovação: ${isApproval} | Bloqueio: ${isBlock}`);
 
     // 4. Log do evento no banco (não crítico)
     try {
@@ -144,98 +261,49 @@ export default async function handler(req: any, res: any) {
         event_type: event,
         buyer_email: normalizedEmail,
         buyer_name: buyerName,
-        transaction_id: transactionId,
+        transaction_id: body.data?.purchase?.transaction || '',
         status: event,
         payload: body
       }]);
-      console.log('[WEBHOOK] Evento salvo no banco.');
     } catch (logErr: any) {
-      console.error('[WEBHOOK] Erro ao salvar log:', logErr?.message);
+      console.warn('[WEBHOOK] Log no banco falhou (não crítico):', logErr?.message);
     }
 
-    // 5. Buscar usuário EXISTENTE pela tabela profiles (NÃO usar auth.admin.getUserByEmail)
-    let existingProfile: any = null;
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('email', normalizedEmail)
-        .maybeSingle();
-
-      if (error) {
-        console.error('[WEBHOOK] Erro ao buscar profile:', error.message);
-      } else {
-        existingProfile = data;
-      }
-    } catch (err: any) {
-      console.error('[WEBHOOK] Exceção ao buscar profile:', err?.message);
-    }
-
-    console.log(`[WEBHOOK] PERFIL EXISTENTE: ${existingProfile ? 'SIM (id: ' + existingProfile.id + ')' : 'NÃO'}`);
-
-    // 6. Processar evento
+    // 5. Processar evento
     if (isApproval) {
-      if (existingProfile) {
-        // Usuário já existe → ativar
-        try {
-          await supabase
-            .from('profiles')
-            .update({ active: true, name: buyerName || existingProfile.name })
-            .eq('id', existingProfile.id);
-          console.log(`[WEBHOOK] USUARIO ATIVADO: ${normalizedEmail}`);
-        } catch (err: any) {
-          console.error('[WEBHOOK] Erro ao ativar usuário:', err?.message);
-        }
+      const userId = await ensureUser(normalizedEmail, buyerName);
 
-        // Enviar email de boas-vindas mesmo na reativação
-        await sendWelcomeEmail(normalizedEmail, buyerName || existingProfile.name || '');
+      if (userId) {
+        // Garantir que está ativo
+        await supabase
+          .from('profiles')
+          .update({ active: true, name: buyerName || undefined })
+          .eq('id', userId);
 
+        console.log(`[WEBHOOK] USUARIO ATIVADO: ${normalizedEmail}`);
+
+        // Enviar email de boas-vindas
+        await sendWelcomeEmail(normalizedEmail, buyerName);
       } else {
-        // Usuário NÃO existe → criar via auth + inserir profile
-        try {
-          const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
-            email: normalizedEmail,
-            password: TUTOR_DEFAULT_PASSWORD,
-            email_confirm: true,
-            user_metadata: { name: buyerName }
-          });
-
-          if (createError) {
-            console.error('[WEBHOOK] Erro ao criar usuário no auth:', createError.message);
-          } else if (newUser?.user) {
-            const userId = newUser.user.id;
-
-            await supabase.from('profiles').upsert({
-              id: userId,
-              email: normalizedEmail,
-              name: buyerName || '',
-              active: true,
-              role: 'user'
-            });
-
-            console.log(`[WEBHOOK] USUARIO CRIADO: ${normalizedEmail} (id: ${userId})`);
-
-            // Enviar email de boas-vindas
-            await sendWelcomeEmail(normalizedEmail, buyerName || '');
-          }
-        } catch (err: any) {
-          console.error('[WEBHOOK] Exceção ao criar usuário:', err?.message);
-        }
+        console.error(`[WEBHOOK] NÃO foi possível criar/encontrar usuário para: ${normalizedEmail}`);
       }
 
     } else if (isBlock) {
-      if (existingProfile) {
-        try {
-          await supabase
-            .from('profiles')
-            .update({ active: false })
-            .eq('id', existingProfile.id);
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('email', normalizedEmail)
+          .maybeSingle();
+
+        if (profile) {
+          await supabase.from('profiles').update({ active: false }).eq('id', profile.id);
           console.log(`[WEBHOOK] USUARIO BLOQUEADO: ${normalizedEmail}`);
-        } catch (err: any) {
-          console.error('[WEBHOOK] Erro ao bloquear:', err?.message);
+        } else {
+          console.log(`[WEBHOOK] Bloqueio ignorado — usuário inexistente: ${normalizedEmail}`);
         }
-      } else {
-        console.log(`[WEBHOOK] Evento de bloqueio para usuário inexistente: ${normalizedEmail}`);
+      } catch (err: any) {
+        console.error('[WEBHOOK] Erro ao bloquear:', err?.message);
       }
 
     } else {

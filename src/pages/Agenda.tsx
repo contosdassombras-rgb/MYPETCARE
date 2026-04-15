@@ -23,7 +23,7 @@ const emptyEvent = (): Omit<PetEvent, 'id'> => ({
 });
 
 export const Agenda: React.FC = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { pets, addEvent, updateEvent, deleteEvent } = usePets();
   const { user } = useUser();
   const [isAdding, setIsAdding] = useState(false);
@@ -72,7 +72,8 @@ export const Agenda: React.FC = () => {
             {
               push: user.pushEnabled,
               email: user.emailEnabled,
-              emailAddress: userEmail || undefined
+              emailAddress: userEmail || undefined,
+              lang: (language as 'pt' | 'en' | 'es') || 'pt'
             }
           );
         }

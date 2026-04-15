@@ -12,11 +12,11 @@ export interface AppointmentNotification {
 
 /**
  * Dispara as notificações habilitadas para um agendamento.
- * Inclui Push (log) e Email (Resend).
+ * Inclui Push (log) e Email (Resend) — com suporte a idioma.
  */
 export const triggerAppointmentNotifications = async (
   notification: AppointmentNotification,
-  settings: { push: boolean; email: boolean; emailAddress?: string }
+  settings: { push: boolean; email: boolean; emailAddress?: string; lang?: 'pt' | 'en' | 'es' }
 ) => {
   // 1. Notificação Push (Pusher Beams)
   // No mundo real, isso seria disparado pelo Backend.
@@ -35,14 +35,17 @@ export const triggerAppointmentNotifications = async (
         ? `${notification.date} às ${notification.time}`
         : notification.date;
 
+      const lang = settings.lang || 'pt';
+
       await sendAppointmentEmail(
         settings.emailAddress,
         notification.tutorName,
         notification.petName,
         dataFormatada,
-        notification.eventType || 'appointment'
+        notification.eventType || 'appointment',
+        lang
       );
-      console.log('[notifications] Appointment email sent successfully');
+      console.log(`[notifications] Appointment email sent successfully (lang=${lang})`);
     } catch (error) {
       console.error('[notifications] Failed to send appointment email:', error);
       // Nunca quebra o fluxo principal

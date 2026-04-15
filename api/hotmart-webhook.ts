@@ -97,17 +97,69 @@ function extractEvent(body: any): string {
   return raw.toLowerCase().trim();
 }
 
-// ─── Email de Boas-Vindas ─────────────────────────────────────────────
-async function sendWelcomeEmail(email: string, name: string): Promise<void> {
-  if (!resendApiKey) {
-    console.log('[WEBHOOK] RESEND_API_KEY não configurada — email ignorado.');
-    return;
-  }
+// ─── Detecção de Idioma pelo país da compra ───────────────────────────
+const LATAM_COUNTRIES = ['AR','BO','CL','CO','CR','CU','DO','EC','SV','GT','HN','MX','NI','PA','PY','PE','PR','UY','VE'];
 
-  const subject = 'Seu acesso ao MyPet Care foi liberado 🐾';
+function detectLanguage(body: any): 'pt' | 'en' | 'es' {
+  const country = (
+    body?.data?.purchase?.checkout_country?.iso ||
+    body?.data?.purchase?.country ||
+    body?.data?.subscriber?.country ||
+    body?.data?.buyer?.country ||
+    ''
+  ).toUpperCase().trim();
+
+  if (country === 'BR') return 'pt';
+  if (LATAM_COUNTRIES.includes(country)) return 'es';
+  return country ? 'en' : 'en'; // fallback = en
+}
+
+// ─── Template de Boas-Vindas Multi-Idioma ─────────────────────────────
+function getWelcomeEmailTemplate(lang: 'pt' | 'en' | 'es', name: string, email: string): { subject: string; html: string } {
+  const t = {
+    pt: {
+      subject: 'Seu acesso ao MyPet Care foi liberado \uD83D\uDC3E',
+      subtitle: 'Cuidado inteligente para o seu pet',
+      greeting: `Olá ${name || 'Tutor'},`,
+      confirmed: 'Sua assinatura foi confirmada!',
+      accessGranted: 'Seu acesso está liberado.',
+      accessNow: 'Acesse agora:',
+      loginEmail: 'Seu email de acesso',
+      cta: 'Acessar MyPet Care Agora',
+      footer: 'Equipe MyPet Care',
+      autoEmail: 'Este é um email automático. Não responda a esta mensagem.',
+    },
+    en: {
+      subject: 'Your access to MyPet Care has been granted \uD83D\uDC3E',
+      subtitle: 'Smart care for your pet',
+      greeting: `Hello ${name || 'Tutor'},`,
+      confirmed: 'Your subscription has been confirmed!',
+      accessGranted: 'Your access has been granted.',
+      accessNow: 'Access now:',
+      loginEmail: 'Your login email',
+      cta: 'Access MyPet Care Now',
+      footer: 'MyPet Care Team',
+      autoEmail: 'This is an automated email. Please do not reply.',
+    },
+    es: {
+      subject: 'Tu acceso a MyPet Care ha sido liberado \uD83D\uDC3E',
+      subtitle: 'Cuidado inteligente para tu mascota',
+      greeting: `Hola ${name || 'Tutor'},`,
+      confirmed: '¡Tu suscripción ha sido confirmada!',
+      accessGranted: 'Tu acceso ha sido liberado.',
+      accessNow: 'Accede ahora:',
+      loginEmail: 'Tu correo de acceso',
+      cta: 'Acceder a MyPet Care Ahora',
+      footer: 'Equipo MyPet Care',
+      autoEmail: 'Este es un correo automático. No responda a este mensaje.',
+    },
+  };
+
+  const s = t[lang];
+
   const html = `
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="${lang}">
 <head><meta charset="UTF-8"></head>
 <body style="margin:0;padding:0;background:#f4f6f8;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f8;padding:40px 0;">
@@ -116,28 +168,29 @@ async function sendWelcomeEmail(email: string, name: string): Promise<void> {
         <tr>
           <td style="background:linear-gradient(135deg,#0d9488 0%,#14b8a6 100%);padding:40px;text-align:center;">
             <h1 style="margin:0;color:#fff;font-size:28px;font-weight:800;">MYPET CARE APP</h1>
-            <p style="margin:8px 0 0;color:rgba(255,255,255,0.85);font-size:14px;">Cuidado inteligente para o seu pet</p>
+            <p style="margin:8px 0 0;color:rgba(255,255,255,0.85);font-size:14px;">${s.subtitle}</p>
           </td>
         </tr>
         <tr>
           <td style="padding:40px;">
-            <h2 style="margin:0 0 16px;color:#1a1a1a;font-size:22px;">Olá ${name || 'Tutor'},</h2>
-            <p style="color:#4a4a4a;font-size:16px;line-height:1.6;">Sua assinatura foi confirmada!<br>Seu acesso está liberado.</p>
-            <p style="color:#4a4a4a;font-size:16px;line-height:1.6;">Acesse agora:<br><a href="https://app.vidacare.site" style="color:#0d9488;font-weight:700;">https://app.vidacare.site</a></p>
+            <h2 style="margin:0 0 16px;color:#1a1a1a;font-size:22px;">${s.greeting}</h2>
+            <p style="color:#4a4a4a;font-size:16px;line-height:1.6;">${s.confirmed}<br>${s.accessGranted}</p>
+            <p style="color:#4a4a4a;font-size:16px;line-height:1.6;">${s.accessNow}<br><a href="https://app.vidacare.site" style="color:#0d9488;font-weight:700;">https://app.vidacare.site</a></p>
             <table width="100%" style="background:#f0fdfa;border-radius:16px;border:1px solid #ccfbf1;margin:24px 0;">
               <tr><td style="padding:24px;">
-                <p style="margin:0 0 8px;color:#6b7280;font-size:12px;font-weight:700;text-transform:uppercase;">Seu email de acesso</p>
+                <p style="margin:0 0 8px;color:#6b7280;font-size:12px;font-weight:700;text-transform:uppercase;">${s.loginEmail}</p>
                 <p style="margin:0;color:#1a1a1a;font-size:18px;font-weight:700;">${email}</p>
               </td></tr>
             </table>
             <table width="100%"><tr><td align="center">
-              <a href="https://app.vidacare.site" style="display:inline-block;background:linear-gradient(135deg,#0d9488,#14b8a6);color:#fff;text-decoration:none;padding:18px 48px;border-radius:16px;font-size:18px;font-weight:800;box-shadow:0 4px 16px rgba(13,148,136,0.3);">Acessar MyPet Care Agora</a>
+              <a href="https://app.vidacare.site" style="display:inline-block;background:linear-gradient(135deg,#0d9488,#14b8a6);color:#fff;text-decoration:none;padding:18px 48px;border-radius:16px;font-size:18px;font-weight:800;box-shadow:0 4px 16px rgba(13,148,136,0.3);">${s.cta}</a>
             </td></tr></table>
           </td>
         </tr>
         <tr>
           <td style="padding:24px 40px;background:#f9fafb;border-top:1px solid #e5e7eb;text-align:center;">
-            <p style="margin:0;color:#9ca3af;font-size:12px;font-weight:600;">Equipe MyPet Care</p>
+            <p style="margin:0;color:#9ca3af;font-size:12px;font-weight:600;">${s.footer}</p>
+            <p style="margin:6px 0 0;color:#d1d5db;font-size:11px;">${s.autoEmail}</p>
           </td>
         </tr>
       </table>
@@ -145,6 +198,21 @@ async function sendWelcomeEmail(email: string, name: string): Promise<void> {
   </table>
 </body>
 </html>`;
+
+  return { subject: s.subject, html };
+}
+
+// ─── Envio de Email de Boas-Vindas ────────────────────────────────────
+async function sendWelcomeEmail(email: string, name: string, lang: 'pt' | 'en' | 'es'): Promise<void> {
+  if (!resendApiKey) {
+    console.log('[WEBHOOK] RESEND_API_KEY não configurada — email ignorado.');
+    return;
+  }
+
+  console.log(`[EMAIL] Idioma selecionado: ${lang}`);
+  console.log(`[EMAIL] Tipo: welcome`);
+
+  const { subject, html } = getWelcomeEmailTemplate(lang, name, email);
 
   try {
     const res = await fetch('https://api.resend.com/emails', {
@@ -156,7 +224,7 @@ async function sendWelcomeEmail(email: string, name: string): Promise<void> {
       const err = await res.json();
       console.error('[WEBHOOK] Erro Resend:', JSON.stringify(err));
     } else {
-      console.log(`[WEBHOOK] EMAIL ENVIADO para ${email}`);
+      console.log(`[WEBHOOK] EMAIL ENVIADO para ${email} (lang=${lang})`);
     }
   } catch (err) {
     console.error('[WEBHOOK] Falha ao enviar email:', err);
@@ -322,8 +390,10 @@ export default async function handler(req: any, res: any) {
 
         console.log(`[WEBHOOK] USUARIO ATIVADO: ${normalizedEmail}`);
 
-        // Enviar email de boas-vindas
-        await sendWelcomeEmail(normalizedEmail, buyerName);
+        // Detectar idioma e enviar email de boas-vindas
+        const lang = detectLanguage(body);
+        console.log(`[WEBHOOK] IDIOMA DETECTADO: ${lang}`);
+        await sendWelcomeEmail(normalizedEmail, buyerName, lang);
       } else {
         console.error(`[WEBHOOK] NÃO foi possível criar/encontrar usuário para: ${normalizedEmail}`);
       }

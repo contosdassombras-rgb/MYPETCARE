@@ -1,19 +1,40 @@
 import { createClient } from '@supabase/supabase-js';
 
-// ─── Configuração ─────────────────────────────────────────────────────
+// ─── ENV ─────────────────────────────────────
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const hotmartSecret = process.env.HOTMART_SECRET;
 const resendApiKey = process.env.RESEND_API_KEY;
 
-const TUTOR_DEFAULT_PASSWORD = 'mypetcare@2024';
-const FROM_ADDRESS = 'MyPet Care <contato@vidacare.site>';
-
 const supabase = createClient(supabaseUrl, supabaseServiceKey, {
   auth: { autoRefreshToken: false, persistSession: false }
 });
 
-// ─── Eventos ──────────────────────────────────────────────────────────
+// ─── EMAIL ───────────────────────────────────
+async function sendWelcomeEmail(email: string, name: string) {
+  if (!resendApiKey) return;
+
+  await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${resendApiKey}`,
+    },
+    body: JSON.stringify({
+      from: 'MyPet Care <contato@vidacare.site>',
+      to: [email],
+      subject: 'Seu acesso ao MyPet Care foi liberado 🐾',
+      html: `
+        <h1>MyPet Care</h1>
+        <p>Olá ${name || 'Tutor'},</p>
+        <p>Seu acesso foi liberado!</p>
+        <a href="https://app.vidacare.site">Acessar agora</a>
+      `,
+    }),
+  });
+}
+
+// ─── EVENTOS ─────────────────────────────────
 const APPROVAL_EVENTS = [
   'purchase_approved',
   'purchase_completed',
@@ -27,46 +48,9 @@ const BLOCK_EVENTS = [
   'purchase_refunded',
   'purchase_chargeback',
   'subscription_cancellation',
-  'refund',
-  'chargeback',
 ];
 
-// ─── Email ────────────────────────────────────────────────────────────
-async function sendWelcomeEmail(email: string, name: string): Promise<void> {
-  if (!resendApiKey) {
-    console.warn('RESEND_API_KEY não configurada');
-    return;
-  }
-
-  try {
-    await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${resendApiKey}`,
-      },
-      body: JSON.stringify({
-        from: FROM_ADDRESS,
-        to: [email],
-        subject: 'Seu acesso ao MyPet Care foi liberado 🐾',
-        html: `
-        <h1>MyPet Care</h1>
-        <p>Olá ${name || 'Tutor'},</p>
-        <p>Seu acesso foi liberado!</p>
-        <p><a href="https://app.vidacare.site">Acessar agora</a></p>
-        <p>Email: ${email}</p>
-        `,
-      }),
-    });
-
-    console.log("EMAIL ENVIADO:", email);
-
-  } catch (error) {
-    console.error("ERRO EMAIL:", error);
-  }
-}
-
-// ─── Handler ──────────────────────────────────────────────────────────
+// ─── HANDLER ─────────────────────────────────
 export default async function handler(req: any, res: any) {
 
   if (req.method !== 'POST') {
@@ -74,114 +58,93 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    console.log("🔥 WEBHOOK RECEBIDO");
-
     const body = req.body;
-    const headers = req.headers;
 
+    console.log("🔥 WEBHOOK RECEBIDO");
     console.log("BODY:", JSON.stringify(body));
 
-    // Token (opcional)
-    const receivedToken = headers['x-hotmart-token'];
-    if (hotmartSecret && receivedToken !== hotmartSecret) {
-      console.warn("TOKEN INVALIDO");
-      return res.status(200).json({ status: 'invalid token' });
+    // 🔐 VALIDAÇÃO PROFISSIONAL HOTMART
+    const hottok = body?.hottok;
+
+    if (!hottok || hottok !== hotmartSecret) {
+      console.warn("❌ HOTMART TOKEN INVALIDO");
+      return res.status(200).json({ status: 'invalid hottok' });
     }
 
-    // Evento
+    console.log("✅ HOTMART VALIDADO");
+
     const event = (body.event || '').toLowerCase().replace(/\s/g, '_').trim();
 
-    // EMAIL (corrigido completo)
-    const buyerEmail =
+    const email =
       body.data?.buyer?.email ||
       body.data?.purchase?.buyer?.email ||
-      body.data?.subscriber?.email ||
-      body.data?.user?.email;
+      body.data?.subscriber?.email;
 
-    const buyerName =
+    const name =
       body.data?.buyer?.name ||
       body.data?.purchase?.buyer?.name ||
-      body.data?.subscriber?.name ||
-      body.data?.user?.name;
+      body.data?.subscriber?.name;
 
-    console.log("EVENTO:", event);
-    console.log("EMAIL:", buyerEmail);
-    console.log("NOME:", buyerName);
+    console.log("EVENT:", event);
+    console.log("EMAIL:", email);
 
-    if (!buyerEmail) {
-      console.log("SEM EMAIL - IGNORADO");
+    if (!email) {
       return res.status(200).json({ status: 'no email' });
     }
 
-    const email = buyerEmail.toLowerCase().trim();
+    const { data: user } = await supabase.auth.admin.getUserByEmail(email);
 
-    const isApproval = APPROVAL_EVENTS.includes(event);
-    const isBlock = BLOCK_EVENTS.includes(event);
+    // ─── APROVAÇÃO ─────────────────────
+    if (APPROVAL_EVENTS.includes(event)) {
 
-    // ─── USUÁRIO ─────────────────────────────────
+      if (user?.user) {
 
-    const { data: authData } = await supabase.auth.admin.getUserByEmail(email);
+        await supabase.from('profiles')
+          .update({ active: true })
+          .eq('id', user.user.id);
 
-    if (isApproval) {
-
-      if (authData?.user) {
-        await supabase.from('profiles').update({
-          active: true,
-          name: buyerName || undefined
-        }).eq('id', authData.user.id);
-
-        console.log("USUARIO ATIVADO:", email);
-
-        await sendWelcomeEmail(email, buyerName || '');
+        console.log("ATIVADO:", email);
 
       } else {
 
-        const { data: newUser, error } = await supabase.auth.admin.createUser({
+        const { data: newUser } = await supabase.auth.admin.createUser({
           email,
-          password: TUTOR_DEFAULT_PASSWORD,
-          email_confirm: true,
-          user_metadata: { name: buyerName || '' }
+          password: '12345678',
+          email_confirm: true
         });
 
-        if (error) {
-          console.error("ERRO CRIAR USER:", error);
-        } else {
-          await supabase.from('profiles').upsert({
-            id: newUser.user.id,
-            email,
-            name: buyerName || '',
-            active: true,
-            role: 'user'
-          });
+        await supabase.from('profiles').insert({
+          id: newUser.user.id,
+          email,
+          name,
+          role: 'user',
+          active: true
+        });
 
-          console.log("USUARIO CRIADO:", email);
-
-          await sendWelcomeEmail(email, buyerName || '');
-        }
+        console.log("CRIADO:", email);
       }
 
-    } else if (isBlock) {
+      await sendWelcomeEmail(email, name || '');
 
-      if (authData?.user) {
-        await supabase.from('profiles').update({
-          active: false
-        }).eq('id', authData.user.id);
-
-        console.log("USUARIO BLOQUEADO:", email);
-      }
-
-    } else {
-      console.log("EVENTO IGNORADO:", event);
     }
 
-    return res.status(200).json({
-      status: 'ok',
-      event,
-      email
-    });
+    // ─── BLOQUEIO ─────────────────────
+    if (BLOCK_EVENTS.includes(event)) {
 
-  } catch (error: any) {
-    console.error("ERRO GERAL:", error);
-    return res.status(200).json({ error: error.message });
+      if (user?.user) {
+        await supabase.from('profiles')
+          .update({ active: false })
+          .eq('id', user.user.id);
+
+        console.log("BLOQUEADO:", email);
+      }
+
+    }
+
+    return res.status(200).json({ ok: true });
+
+  } catch (err: any) {
+    console.error("ERRO:", err);
+    return res.status(200).json({ error: err.message });
   }
 }

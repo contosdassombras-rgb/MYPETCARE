@@ -1,4 +1,4 @@
-import { sendEmail } from './emailService';
+import { sendAppointmentEmail } from './email';
 
 export interface AppointmentNotification {
   title: string;
@@ -7,20 +7,22 @@ export interface AppointmentNotification {
   date: string;
   time?: string;
   tutorName: string;
+  eventType?: string;
 }
 
 /**
- * Dispara as notificações habilitadas para um agendamento
+ * Dispara as notificações habilitadas para um agendamento.
+ * Inclui Push (log) e Email (Resend).
  */
 export const triggerAppointmentNotifications = async (
   notification: AppointmentNotification,
   settings: { push: boolean; email: boolean; emailAddress?: string }
 ) => {
   // 1. Notificação Push (Pusher Beams)
-  // Nota: No mundo real, isso seria disparado pelo Backend. 
-  // Aqui, apenas logamos o payload que seria enviado ao servidor.
+  // No mundo real, isso seria disparado pelo Backend.
+  // Aqui, logamos o payload que seria enviado ao servidor.
   if (settings.push) {
-    console.log('Push Notification Triggered:', {
+    console.log('[notifications] Push Notification Triggered:', {
       title: `Lembrete: ${notification.title}`,
       body: `${notification.petName}: ${notification.body} em ${notification.date} às ${notification.time || '--:--'}`,
     });
@@ -29,27 +31,21 @@ export const triggerAppointmentNotifications = async (
   // 2. Notificação por E-mail (Resend)
   if (settings.email && settings.emailAddress) {
     try {
-      await sendEmail({
-        to: settings.emailAddress,
-        subject: `Lembrete de Agendamento: ${notification.petName}`,
-        html: `
-          <div style="font-family: sans-serif; padding: 20px; color: #333;">
-            <h2 style="color: #6366f1;">Olá, ${notification.tutorName}!</h2>
-            <p>Este é um lembrete do MyPetCare sobre o próximo compromisso do seu pet.</p>
-            <div style="background: #f3f4f6; padding: 15px; border-radius: 10px; margin: 20px 0;">
-              <p><strong>Pet:</strong> ${notification.petName}</p>
-              <p><strong>Evento:</strong> ${notification.title}</p>
-              <p><strong>Data:</strong> ${notification.date}</p>
-              <p><strong>Hora:</strong> ${notification.time || 'Não especificada'}</p>
-              ${notification.body ? `<p><strong>Notas:</strong> ${notification.body}</p>` : ''}
-            </div>
-            <p>Atenciosamente,<br>Equipe MyPetCare</p>
-          </div>
-        `
-      });
-      console.log('Email sent successfully via Resend');
+      const dataFormatada = notification.time
+        ? `${notification.date} às ${notification.time}`
+        : notification.date;
+
+      await sendAppointmentEmail(
+        settings.emailAddress,
+        notification.tutorName,
+        notification.petName,
+        dataFormatada,
+        notification.eventType || 'appointment'
+      );
+      console.log('[notifications] Appointment email sent successfully');
     } catch (error) {
-      console.error('Failed to send email notification:', error);
+      console.error('[notifications] Failed to send appointment email:', error);
+      // Nunca quebra o fluxo principal
     }
   }
 };

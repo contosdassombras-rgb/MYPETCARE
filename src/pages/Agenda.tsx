@@ -55,6 +55,10 @@ export const Agenda: React.FC = () => {
         await addEvent(selectedPetId, newEvent);
         
         if (pet) {
+          // Obter email da sessão autenticada
+          const { data: sessionData } = await (await import('../lib/supabaseClient')).supabase.auth.getSession();
+          const userEmail = sessionData?.session?.user?.email;
+
           await triggerAppointmentNotifications(
             {
               title: newEvent.title,
@@ -62,12 +66,13 @@ export const Agenda: React.FC = () => {
               petName: pet.name,
               date: new Date(`${newEvent.date}T00:00:00`).toLocaleDateString(),
               time: newEvent.time,
-              tutorName: user.name
+              tutorName: user.name,
+              eventType: newEvent.type
             },
             {
               push: user.pushEnabled,
               email: user.emailEnabled,
-              emailAddress: 'marceloneto.contato@outlook.com'
+              emailAddress: userEmail || undefined
             }
           );
         }

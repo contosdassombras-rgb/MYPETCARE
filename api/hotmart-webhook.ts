@@ -31,20 +31,25 @@ const BLOCK_EVENTS = [
 
 // ─── Extrair email do payload (múltiplos formatos Hotmart) ────────────
 function extractBuyerEmail(body: any): string {
-  // Formato padrão v2: body.data.buyer.email
+  // Formato real Hotmart v2: body.data.subscriber.email
+  if (body?.data?.subscriber?.email) return body.data.subscriber.email;
+  // Formato alternativo: body.data.buyer.email
   if (body?.data?.buyer?.email) return body.data.buyer.email;
-  // Formato alternativo: body.data.email
+  // Formato flat data: body.data.email
   if (body?.data?.email) return body.data.email;
-  // Formato flat: body.email
+  // Formato raiz: body.email
   if (body?.email) return body.email;
-  // Formato antigo: body.data.buyer_email
+  // Formato legado: body.data.buyer_email
   if (body?.data?.buyer_email) return body.data.buyer_email;
-  // Formato webhook test: body.buyer?.email
+  // Formato teste: body.buyer?.email / body.subscriber?.email
   if (body?.buyer?.email) return body.buyer.email;
+  if (body?.subscriber?.email) return body.subscriber.email;
   return '';
 }
 
 function extractBuyerName(body: any): string {
+  // Formato real Hotmart v2: body.data.subscriber.name
+  if (body?.data?.subscriber?.name) return body.data.subscriber.name;
   if (body?.data?.buyer?.name) return body.data.buyer.name;
   if (body?.data?.buyer?.first_name) {
     const last = body.data.buyer.last_name || '';
@@ -53,6 +58,7 @@ function extractBuyerName(body: any): string {
   if (body?.data?.name) return body.data.name;
   if (body?.data?.buyer_name) return body.data.buyer_name;
   if (body?.buyer?.name) return body.buyer.name;
+  if (body?.subscriber?.name) return body.subscriber.name;
   return '';
 }
 

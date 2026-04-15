@@ -29,28 +29,57 @@ const BLOCK_EVENTS = [
   'subscription_cancellation',
 ];
 
-// ─── Extrair email do payload (múltiplos formatos Hotmart) ────────────
+// ─── Encontrar email recursivamente em qualquer objeto ────────────────
+function findEmailInObject(obj: any, depth = 0): string {
+  if (!obj || depth > 5) return '';
+  if (typeof obj === 'string' && obj.includes('@') && obj.includes('.')) return obj;
+  if (typeof obj !== 'object') return '';
+  
+  // Priorizar campos que costumam ter email
+  const emailKeys = ['email', 'buyer_email', 'subscriber_email', 'user_email', 'contact_email'];
+  for (const key of emailKeys) {
+    if (obj[key] && typeof obj[key] === 'string' && obj[key].includes('@')) {
+      return obj[key];
+    }
+  }
+  
+  // Buscar recursivamente
+  for (const key of Object.keys(obj)) {
+    const found = findEmailInObject(obj[key], depth + 1);
+    if (found) return found;
+  }
+  return '';
+}
+
+// ─── Extrair email do payload (todos os formatos Hotmart) ─────────────
 function extractBuyerEmail(body: any): string {
-  // Formato real Hotmart v2: body.data.subscriber.email
+  // Formato Hotmart v2: data.subscriber.email
   if (body?.data?.subscriber?.email) return body.data.subscriber.email;
-  // Formato alternativo: body.data.buyer.email
+  // Formato Hotmart: data.buyer.email
   if (body?.data?.buyer?.email) return body.data.buyer.email;
-  // Formato flat data: body.data.email
+  // Formato Hotmart: data.user.email
+  if (body?.data?.user?.email) return body.data.user.email;
+  // Formato flat: data.email
   if (body?.data?.email) return body.data.email;
-  // Formato raiz: body.email
+  // Raiz: body.email
   if (body?.email) return body.email;
-  // Formato legado: body.data.buyer_email
+  // Legado
   if (body?.data?.buyer_email) return body.data.buyer_email;
-  // Formato teste: body.buyer?.email / body.subscriber?.email
   if (body?.buyer?.email) return body.buyer.email;
   if (body?.subscriber?.email) return body.subscriber.email;
+  if (body?.user?.email) return body.user.email;
+  
+  // FALLBACK: busca recursiva por qualquer campo com email
+  const found = findEmailInObject(body);
+  if (found) return found;
+  
   return '';
 }
 
 function extractBuyerName(body: any): string {
-  // Formato real Hotmart v2: body.data.subscriber.name
   if (body?.data?.subscriber?.name) return body.data.subscriber.name;
   if (body?.data?.buyer?.name) return body.data.buyer.name;
+  if (body?.data?.user?.name) return body.data.user.name;
   if (body?.data?.buyer?.first_name) {
     const last = body.data.buyer.last_name || '';
     return `${body.data.buyer.first_name} ${last}`.trim();
@@ -59,6 +88,7 @@ function extractBuyerName(body: any): string {
   if (body?.data?.buyer_name) return body.data.buyer_name;
   if (body?.buyer?.name) return body.buyer.name;
   if (body?.subscriber?.name) return body.subscriber.name;
+  if (body?.user?.name) return body.user.name;
   return '';
 }
 
@@ -222,10 +252,14 @@ export default async function handler(req: any, res: any) {
     const body = req.body || {};
 
     // LOG DO PAYLOAD COMPLETO (para debug)
+    const payloadStr = JSON.stringify(body);
+    console.log('[WEBHOOK] PAYLOAD COMPLETO:', payloadStr.substring(0, 2000));
     console.log('[WEBHOOK] PAYLOAD KEYS:', Object.keys(body).join(', '));
-    console.log('[WEBHOOK] PAYLOAD.DATA KEYS:', body.data ? Object.keys(body.data).join(', ') : 'N/A');
-    if (body.data?.buyer) {
-      console.log('[WEBHOOK] PAYLOAD.DATA.BUYER KEYS:', Object.keys(body.data.buyer).join(', '));
+    if (body.data) {
+      console.log('[WEBHOOK] DATA KEYS:', Object.keys(body.data).join(', '));
+      if (body.data.subscriber) console.log('[WEBHOOK] SUBSCRIBER:', JSON.stringify(body.data.subscriber).substring(0, 300));
+      if (body.data.buyer) console.log('[WEBHOOK] BUYER:', JSON.stringify(body.data.buyer).substring(0, 300));
+      if (body.data.user) console.log('[WEBHOOK] USER:', JSON.stringify(body.data.user).substring(0, 300));
     }
 
     // 1. Token Hotmart — tolerante

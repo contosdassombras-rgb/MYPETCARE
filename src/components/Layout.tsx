@@ -91,7 +91,7 @@ export const Layout: React.FC = () => {
             <div className="flex items-center gap-4">
               {!isHome && (
                 <button
-                  onClick={() => navigate(-1)}
+                  onClick={() => navigate('/')}
                   className="p-2 -ml-2 text-on-surface-variant hover:bg-surface-container-low rounded-full transition-colors flex items-center justify-center"
                   aria-label={t('back')}
                 >

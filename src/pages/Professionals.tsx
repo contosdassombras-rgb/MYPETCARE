@@ -51,7 +51,8 @@ const WhatsAppIcon = ({ className }: { className?: string }) => (
 const MAX_COMMENT_CHARS = 300;
 const OVERPASS_ENDPOINTS = [
   'https://overpass-api.de/api/interpreter',
-  'https://overpass.kumi.systems/api/interpreter',
+  'https://lz4.overpass-api.de/api/interpreter',
+  'https://z.overpass-api.de/api/interpreter',
   'https://overpass.n.osm.ch/api/interpreter'
 ];
 const NOMINATIM_URL = 'https://nominatim.openstreetmap.org/search?format=json&q=';
@@ -128,6 +129,7 @@ export const Professionals: React.FC = () => {
   const fetchClinics = useCallback(async (lat: number, lon: number) => {
     setLoading(true);
     setError(null);
+    setClinics([]);
     setLastCoords({ lat, lon });
     
     const query = `[out:json][timeout:25];(node["amenity"="veterinary"](around:${radius * 1000}, ${lat}, ${lon});way["amenity"="veterinary"](around:${radius * 1000}, ${lat}, ${lon});node["healthcare"="veterinary"](around:${radius * 1000}, ${lat}, ${lon});way["healthcare"="veterinary"](around:${radius * 1000}, ${lat}, ${lon}););out center;`;
@@ -346,10 +348,7 @@ export const Professionals: React.FC = () => {
 
             {error && (
               <div className="col-span-full text-center py-20 text-error">
-                <p className="font-bold">{error}</p>
-                <Button variant="ghost" onClick={handleGeolocation} className="mt-4 underline">
-                  Tentar novamente com GPS
-                </Button>
+                <p className="font-bold text-lg">{error}</p>
               </div>
             )}
 

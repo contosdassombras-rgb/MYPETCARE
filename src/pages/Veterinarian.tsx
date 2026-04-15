@@ -276,7 +276,7 @@ export const Veterinarian: React.FC = () => {
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
-              className="relative w-full max-w-lg bg-surface rounded-t-3xl md:rounded-3xl p-8 shadow-2xl"
+              className="relative w-full max-w-lg bg-surface rounded-t-3xl md:rounded-3xl p-8 shadow-2xl max-h-[90vh] overflow-y-auto"
             >
               <div className="flex justify-between items-center mb-8">
                 <h2 className="text-2xl font-bold font-headline">{t('new_contact')}</h2>

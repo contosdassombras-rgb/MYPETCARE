@@ -209,9 +209,9 @@ export const PetForm: React.FC = () => {
   };
 
   return (
-    <div className="max-w-3xl mx-auto pb-20">
+    <div className="max-w-3xl mx-auto pb-32">
       <div className="flex items-center justify-between mb-12">
-        <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="rounded-2xl">
+        <Button variant="ghost" size="icon" onClick={() => navigate('/')} className="rounded-2xl">
           <ChevronLeft className="w-8 h-8" />
         </Button>
         <h1 className="text-4xl font-black font-headline tracking-tighter">{id ? t('edit_pet') : t('add_pet')}</h1>

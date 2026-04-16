@@ -32,6 +32,12 @@ export const Agenda: React.FC = () => {
   const [selectedPetId, setSelectedPetId] = useState(pets[0]?.id || '');
   const [newEvent, setNewEvent] = useState<Omit<PetEvent, 'id'>>(emptyEvent());
 
+  React.useEffect(() => {
+    if (!selectedPetId && pets.length > 0) {
+      setSelectedPetId(pets[0].id);
+    }
+  }, [pets, selectedPetId]);
+
   const allEvents = pets
     .flatMap(p => (p.events || []).map(e => ({ ...e, petId: p.id, petName: p.name })))
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -81,8 +87,7 @@ export const Agenda: React.FC = () => {
       }
       setIsAdding(false);
       setNewEvent(emptyEvent());
-      // Forçar redirecionamento para o Painel Principal conforme solicitado
-      window.location.href = '/'; 
+      alert(t('event_added_success') || 'Evento salvo com sucesso!');
     } catch (err) {
       console.error('Error saving event:', err);
     }
@@ -127,12 +132,13 @@ export const Agenda: React.FC = () => {
           <h1 className="editorial-header">{t('agenda')}</h1>
           <p className="text-on-surface-variant mt-2 font-medium opacity-60 uppercase tracking-widest text-xs">{t('manage_routine')}</p>
         </div>
-        <Button
-          onClick={() => { setEditingEvent(null); setIsAdding(true); }}
-          className="w-16 h-16 rounded-3xl"
-        >
-          <Plus className="w-8 h-8" />
-        </Button>
+            <Button
+              onClick={() => { setEditingEvent(null); setIsAdding(true); }}
+              className="md:px-8 md:py-5 rounded-full md:rounded-[2rem] shadow-2xl w-14 h-14 md:w-auto md:h-auto flex items-center justify-center shrink-0"
+            >
+              <Plus className="w-6 h-6 md:mr-2" />
+              <span className="hidden md:inline">{t('add_event')}</span>
+            </Button>
       </header>
 
       <div className="space-y-6 md:space-y-12">

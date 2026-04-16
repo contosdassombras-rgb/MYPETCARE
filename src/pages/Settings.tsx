@@ -308,10 +308,10 @@ export const Settings: React.FC = () => {
                       <div className="flex flex-col sm:flex-row gap-4">
                         <input
                           type="email"
-                          value={formData.notificationEmail || user.session?.user?.email || ''}
+                          value={formData.notificationEmail}
                           onChange={e => setFormData({ ...formData, notificationEmail: e.target.value })}
                           className="flex-1 px-6 py-5 bg-surface-container-low border-none rounded-2xl focus:ring-4 focus:ring-primary/20 outline-none transition-all font-bold text-lg"
-                          placeholder={t('notification_email_placeholder')}
+                          placeholder={t('notification_email_placeholder') || 'E-mail para lembretes'}
                         />
                         <Button 
                           onClick={handleSaveProfile}

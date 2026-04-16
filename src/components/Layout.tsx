@@ -172,14 +172,16 @@ export const Layout: React.FC = () => {
           </div>
         </nav>
 
-        {/* FAB (Mobile Only) */}
-        <Button
-          onClick={() => navigate('/pet/new')}
-          className="md:hidden fixed bottom-28 right-6 w-16 h-16 rounded-2xl shadow-2xl z-40 active:scale-90"
-          aria-label={t('add_pet')}
-        >
-          <Plus className="w-10 h-10" />
-        </Button>
+        {/* FAB (Mobile Only) - Only on Dashboard as requested by user */}
+        {location.pathname === '/' && (
+          <Button
+            onClick={() => navigate('/pet/new')}
+            className="md:hidden fixed bottom-28 right-6 w-16 h-16 rounded-2xl shadow-2xl z-40 active:scale-90"
+            aria-label={t('add_pet')}
+          >
+            <Plus className="w-10 h-10" />
+          </Button>
+        )}
       </div>
     </div>
   );

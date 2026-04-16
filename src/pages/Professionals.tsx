@@ -413,10 +413,10 @@ export const Professionals: React.FC = () => {
             </div>
             <Button
               onClick={() => setIsAddingProfessional(true)}
-              className="px-8 py-5 rounded-[2rem] shadow-2xl"
+              className="md:px-8 md:py-5 rounded-full md:rounded-[2rem] shadow-2xl w-14 h-14 md:w-auto md:h-auto flex items-center justify-center shrink-0"
             >
-              <Plus className="w-6 h-6 mr-2" />
-              {t('add_recommendation')}
+              <Plus className="w-6 h-6 md:mr-2" />
+              <span className="hidden md:inline">{t('add_recommendation')}</span>
             </Button>
           </div>
 

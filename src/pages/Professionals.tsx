@@ -495,7 +495,7 @@ export const Professionals: React.FC = () => {
           animate={{ opacity: 1, scale: 1 }}
           onClick={() => setSelectedProfessional(pro)}
         >
-          <Card className="p-10 rounded-[2.5rem] bg-surface-container-lowest shadow-xl border-none relative overflow-hidden group h-full flex flex-col cursor-pointer hover:bg-surface-container-low transition-colors">
+          <Card className="p-5 md:p-10 rounded-[2.5rem] bg-surface-container-lowest shadow-xl border-none relative overflow-hidden group h-full flex flex-col cursor-pointer hover:bg-surface-container-low transition-colors">
             {/* card content... same as before but inside the filtered map */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-bl-[5rem] -mr-8 -mt-8 transition-transform group-hover:scale-110" />
             

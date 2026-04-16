@@ -171,8 +171,12 @@ Return only the JSON. No explanation, no markdown, no backticks.`;
           animate={{ opacity: 1, x: 0 }}
           className="editorial-header"
         >
-          {t('welcome_back')}, <br />
-          <span className="bg-gradient-to-r from-primary to-primary-container bg-clip-text text-transparent">MyPetCare.</span>
+          {t('welcome_back')}{user.name && user.name !== 'Tutor MyPetCare' ? ',' : '.'} <br />
+          {user.name && user.name !== 'Tutor MyPetCare' && (
+            <span className="bg-gradient-to-r from-primary to-primary-container bg-clip-text text-transparent">
+              {user.name}.
+            </span>
+          )}
         </motion.h1>
         <p className="mt-4 text-on-surface-variant text-lg max-w-md">
           {t('welcome_message')}

@@ -4,7 +4,7 @@ import { LanguageProvider } from './contexts/LanguageContext';
 import { UserProvider } from './contexts/UserContext';
 import { PetProvider } from './contexts/PetContext';
 import { Layout } from './components/Layout';
-import { usePushNotifications } from './hooks/usePushNotifications';
+import { useAppointmentReminders } from './hooks/usePushNotifications';
 
 import { Dashboard } from './pages/Dashboard';
 import { PetProfile } from './pages/PetProfile';
@@ -86,8 +86,8 @@ const AppRoutes: React.FC = () => {
 
   // PWA install prompt is handled in main.tsx
   
-  // Push notifications — fully auth-gated and non-blocking inside the hook
-  usePushNotifications();
+  // Email reminders — auth-gated inside the hook
+  useAppointmentReminders();
 
   const isAuthenticated = !!session;
 

@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { deleteFile, getPathFromUrl } from '../lib/storage';
-import { refreshUpcomingNotifications } from '../lib/pushNotifications';
+import { refreshUpcomingNotifications } from '../lib/appointmentMonitor';
 
 export interface PetEvent {
   id: string;

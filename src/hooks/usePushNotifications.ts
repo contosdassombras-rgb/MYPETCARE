@@ -1,91 +1,32 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useUser } from '../contexts/UserContext';
 import { usePets } from '../contexts/PetContext';
-import { startAppointmentChecker, stopAppointmentChecker, type ScheduledEvent } from '../lib/pushNotifications';
-
-const INSTANCE_ID = import.meta.env.VITE_PUSHER_BEAMS_INSTANCE_ID as string | undefined;
+import { useLanguage } from '../contexts/LanguageContext';
+import { startAppointmentMonitor, stopAppointmentMonitor, type ScheduledEvent } from '../lib/appointmentMonitor';
 
 /**
- * Push notification hook — Pusher Beams + Appointment Checker.
- * - Gated behind user authentication
- * - Completely non-blocking: errors are silently logged
- * - Monitors upcoming appointments and sends local push notifications
+ * Hook de Monitoramento de Agendamentos — Lembretes por E-mail.
+ * - Monitora eventos próximos e envia e-mails via Resend 30 min antes.
  */
-export const usePushNotifications = () => {
+export const useAppointmentReminders = () => {
   const { session, user } = useUser();
   const { pets } = usePets();
-  const [isSubscribed, setIsSubscribed] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const clientRef = useRef<any>(null);
-  const initAttempted = useRef(false);
-  const checkerStarted = useRef(false);
+  const { language } = useLanguage();
+  const monitorStarted = useRef(false);
 
-  // ─── Pusher Beams initialization ────────────────────────────────────
   useEffect(() => {
-    if (!session?.user?.id || !INSTANCE_ID) return;
-    if (initAttempted.current) return;
-    initAttempted.current = true;
-
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-      console.warn('[Beams] Push notifications not supported in this browser.');
-      return;
-    }
-
-    if (Notification.permission === 'denied') {
-      console.warn('[Beams] Push notification permission has been denied by user.');
-      return;
-    }
-
-    let mounted = true;
-
-    const initBeams = async () => {
-      try {
-        const PusherPushNotifications = await import('@pusher/push-notifications-web');
-        if (!mounted) return;
-
-        const client = new PusherPushNotifications.Client({
-          instanceId: INSTANCE_ID!,
-        });
-
-        await client.start();
-        if (!mounted) return;
-
-        await client.addDeviceInterest('appointments');
-        await client.addDeviceInterest(`user-${session.user.id}`);
-
-        clientRef.current = client;
-        setIsSubscribed(true);
-        console.log('[Beams] ✓ Subscribed to Pusher Beams successfully.');
-      } catch (err: unknown) {
-        if (!mounted) return;
-        const msg = err instanceof Error ? err.message : String(err);
-        console.warn('[Beams] Non-fatal initialization error:', msg);
-        setError(msg);
-      }
-    };
-
-    initBeams();
-
-    return () => {
-      mounted = false;
-    };
-  }, [session?.user?.id]);
-
-  // ─── Appointment Checker (local push notifications) ─────────────────
-  useEffect(() => {
-    // Only start if push is enabled, user is logged in, and permission granted
-    if (!session?.user?.id || !user.pushEnabled) {
-      if (checkerStarted.current) {
-        stopAppointmentChecker();
-        checkerStarted.current = false;
+    // Só inicia se lembretes por e-mail estiverem ativos e houver um e-mail definido
+    const notificationEmail = user.notificationEmail || session?.user?.email;
+    
+    if (!session?.user?.id || !user.emailEnabled || !notificationEmail) {
+      if (monitorStarted.current) {
+        stopAppointmentMonitor();
+        monitorStarted.current = false;
       }
       return;
     }
 
-    if (Notification.permission !== 'granted') return;
-    if (checkerStarted.current) return;
-
-    // Build event getter from current pets
+    // Builder de eventos simplificado
     const getEvents = (): ScheduledEvent[] => {
       try {
         return pets
@@ -97,52 +38,27 @@ export const usePushNotifications = () => {
             time: e.time,
             type: e.type,
           })))
-          .filter(e => !e.date ? false : true);
+          .filter(e => !!e.date && !e.completed);
       } catch {
         return [];
       }
     };
 
-    startAppointmentChecker(getEvents);
-    checkerStarted.current = true;
-    console.log('[Push] Appointment checker activated');
+    startAppointmentMonitor(getEvents, {
+      enabled: user.emailEnabled,
+      email: notificationEmail,
+      tutorName: user.name,
+      language: (language as 'pt' | 'en' | 'es') || 'pt'
+    });
+
+    monitorStarted.current = true;
+    console.log('[monitor] Email appointment monitor activated');
 
     return () => {
-      stopAppointmentChecker();
-      checkerStarted.current = false;
+      stopAppointmentMonitor();
+      monitorStarted.current = false;
     };
-  }, [session?.user?.id, user.pushEnabled, pets]);
+  }, [session?.user?.id, user.emailEnabled, user.notificationEmail, user.name, pets, language]);
 
-  // Reset on logout
-  useEffect(() => {
-    if (!session?.user?.id) {
-      initAttempted.current = false;
-      checkerStarted.current = false;
-      setIsSubscribed(false);
-      setError(null);
-      stopAppointmentChecker();
-    }
-  }, [session?.user?.id]);
-
-  const addInterest = async (interest: string) => {
-    if (clientRef.current) {
-      try {
-        await clientRef.current.addDeviceInterest(interest);
-      } catch (err) {
-        console.warn('[Beams] addInterest error:', err);
-      }
-    }
-  };
-
-  const removeInterest = async (interest: string) => {
-    if (clientRef.current) {
-      try {
-        await clientRef.current.removeDeviceInterest(interest);
-      } catch (err) {
-        console.warn('[Beams] removeInterest error:', err);
-      }
-    }
-  };
-
-  return { isSubscribed, error, addInterest, removeInterest };
+  return { monitorStarted: monitorStarted.current };
 };

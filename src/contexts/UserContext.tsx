@@ -9,6 +9,7 @@ interface UserProfile {
   phone: string;
   pushEnabled: boolean;
   emailEnabled: boolean;
+  notificationEmail: string;
   role: 'admin' | 'user';
   active: boolean;
 }
@@ -29,6 +30,7 @@ const DEFAULT_USER: UserProfile = {
   phone: '',
   pushEnabled: false,
   emailEnabled: true,
+  notificationEmail: '',
   role: 'user',
   active: true,
 };
@@ -65,6 +67,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           phone: data.phone || '',
           pushEnabled: data.push_enabled || false,
           emailEnabled: data.email_enabled !== false,
+          notificationEmail: data.notification_email || '',
           role: data.role === 'admin' ? 'admin' : 'user',
           active: data.active !== false,
         });
@@ -175,6 +178,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (updates.photo !== undefined) dbUpdates.photo_url = updates.photo;
       if (updates.pushEnabled !== undefined) dbUpdates.push_enabled = updates.pushEnabled;
       if (updates.emailEnabled !== undefined) dbUpdates.email_enabled = updates.emailEnabled;
+      if (updates.notificationEmail !== undefined) dbUpdates.notification_email = updates.notificationEmail;
       if (updates.active !== undefined) dbUpdates.active = updates.active;
 
       if (Object.keys(dbUpdates).length === 0) return;

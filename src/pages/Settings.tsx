@@ -48,15 +48,17 @@ export const Settings: React.FC = () => {
 
   const [formData, setFormData] = useState({
     name: user.name || '',
-    phone: user.phone || ''
+    phone: user.phone || '',
+    notificationEmail: user.notificationEmail || ''
   });
 
   useEffect(() => {
     setFormData({
       name: user.name || '',
-      phone: user.phone || ''
+      phone: user.phone || '',
+      notificationEmail: user.notificationEmail || ''
     });
-  }, [user.name, user.phone]);
+  }, [user.name, user.phone, user.notificationEmail]);
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -69,25 +71,7 @@ export const Settings: React.FC = () => {
     }
   };
 
-  const handlePushToggle = async () => {
-    if (!user.pushEnabled) {
-      // Ativando — solicitar permissão do navegador
-      const { requestPushPermission, isPushSupported } = await import('../lib/pushNotifications');
-      if (!isPushSupported()) {
-        alert(t('push_not_supported') || 'Push notifications are not supported on this browser.');
-        return;
-      }
-      const granted = await requestPushPermission();
-      if (!granted) {
-        alert(t('push_permission_denied') || 'Permission denied. Enable notifications in your browser settings.');
-        return;
-      }
-      updateUser({ pushEnabled: true });
-    } else {
-      // Desativando
-      updateUser({ pushEnabled: false });
-    }
-  };
+
   const handleEmailToggle = () => updateUser({ emailEnabled: !user.emailEnabled });
   
   const handleSaveProfile = async () => {
@@ -261,6 +245,21 @@ export const Settings: React.FC = () => {
                       placeholder="(00) 00000-0000"
                     />
                   </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-[0.2em] ml-2">
+                      {t('notification_email_label')}
+                    </label>
+                    <input
+                      type="email"
+                      value={formData.notificationEmail || user.session?.user?.email || ''}
+                      onChange={e => setFormData({ ...formData, notificationEmail: e.target.value })}
+                      className="w-full px-6 py-5 bg-surface-container-low border-none rounded-2xl focus:ring-4 focus:ring-primary/20 outline-none transition-all font-bold text-lg"
+                      placeholder={t('notification_email_placeholder')}
+                    />
+                    <p className="text-[10px] text-on-surface-variant opacity-60 font-medium ml-2">
+                      {t('email_reminders_desc')}
+                    </p>
+                  </div>
                   
                   <Button 
                     onClick={handleSaveProfile}
@@ -284,30 +283,46 @@ export const Settings: React.FC = () => {
               <h2 className="text-2xl font-black font-headline tracking-tighter px-4">
                 {t('notifications')}
               </h2>
-              <Card className="p-2 overflow-hidden border-none bg-surface-container-low/30 shadow-none rounded-[2.5rem]">
-                <div className="flex items-center justify-between p-8 border-b border-surface-container-high/20">
-                  <div className="flex items-center gap-6">
-                    <div className="p-4 rounded-2xl bg-surface-container-low text-primary shadow-sm">
-                      <Smartphone className="w-7 h-7" />
-                    </div>
-                    <div>
-                      <span className="font-black text-on-surface text-lg leading-tight">{t('push_notifications')}</span>
-                      <p className="text-xs text-on-surface-variant opacity-60 font-medium">Alertas no seu dispositivo</p>
-                    </div>
-                  </div>
-                  <Toggle enabled={user.pushEnabled} onToggle={handlePushToggle} />
-                </div>
-                <div className="flex items-center justify-between p-8">
+              <Card className="p-8 space-y-8 border-none bg-surface-container-low/30 shadow-none rounded-[2.5rem]">
+                <div className="space-y-6">
                   <div className="flex items-center gap-6">
                     <div className="p-4 rounded-2xl bg-surface-container-low text-primary shadow-sm">
                       <Mail className="w-7 h-7" />
                     </div>
-                    <div>
+                    <div className="flex-1">
                       <span className="font-black text-on-surface text-lg leading-tight">{t('email_reminders')}</span>
-                      <p className="text-xs text-on-surface-variant opacity-60 font-medium">Lembretes por e-mail</p>
+                      <p className="text-xs text-on-surface-variant opacity-60 font-medium">{t('email_reminders_desc')}</p>
                     </div>
+                    <Toggle enabled={user.emailEnabled} onToggle={handleEmailToggle} />
                   </div>
-                  <Toggle enabled={user.emailEnabled} onToggle={handleEmailToggle} />
+
+                  {user.emailEnabled && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="space-y-2 pt-4 border-t border-surface-container-high/20"
+                    >
+                      <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-[0.2em] ml-2">
+                        {t('notification_email_label')}
+                      </label>
+                      <div className="flex gap-4">
+                        <input
+                          type="email"
+                          value={formData.notificationEmail || user.session?.user?.email || ''}
+                          onChange={e => setFormData({ ...formData, notificationEmail: e.target.value })}
+                          className="flex-1 px-6 py-5 bg-surface-container-low border-none rounded-2xl focus:ring-4 focus:ring-primary/20 outline-none transition-all font-bold text-lg"
+                          placeholder={t('notification_email_placeholder')}
+                        />
+                        <Button 
+                          onClick={handleSaveProfile}
+                          variant="primary"
+                          className="px-8 rounded-2xl font-black"
+                        >
+                          {t('save')}
+                        </Button>
+                      </div>
+                    </motion.div>
+                  )}
                 </div>
               </Card>
             </motion.section>

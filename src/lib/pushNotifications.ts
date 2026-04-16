@@ -110,6 +110,7 @@ export async function showLocalNotification(
 
 // ─── Agendar verificação de eventos próximos ─────────────────────────
 let checkInterval: ReturnType<typeof setInterval> | null = null;
+let lastGetEvents: (() => ScheduledEvent[]) | null = null;
 
 export interface ScheduledEvent {
   id: string;
@@ -120,53 +121,66 @@ export interface ScheduledEvent {
   type: string;
 }
 
+/**
+ * Força uma verificação imediata de notificações pendentes.
+ * Útil para disparar notificações logo após criar um agendamento.
+ */
+export function refreshUpcomingNotifications(): void {
+  if (lastGetEvents) {
+    const notifiedIds = new Set<string>(
+      JSON.parse(localStorage.getItem('mypetcare_notified_events') || '[]')
+    );
+
+    const check = () => {
+      if (Notification.permission !== 'granted') return;
+
+      const now = new Date();
+      const events = lastGetEvents!();
+
+      for (const event of events) {
+        if (notifiedIds.has(event.id)) continue;
+
+        // Parse seguro para o fuso local: YYYY-MM-DD + HH:mm
+        // Evitamos string simples que PODE ser tratada como UTC por alguns browsers
+        const [y, m, d] = event.date.split('-').map(Number);
+        const [hh, mm] = (event.time || '00:00').split(':').map(Number);
+        const eventDate = new Date(y, m - 1, d, hh, mm, 0);
+
+        const diffMs = eventDate.getTime() - now.getTime();
+        const diffMinutes = diffMs / (1000 * 60);
+
+        // Notificar 30 min antes ou se já passou (até 5 min depois)
+        if (diffMinutes <= 30 && diffMinutes >= -5) {
+          const timeStr = event.time || '';
+          const body = timeStr
+            ? `${event.petName} — Hoje às ${timeStr}`
+            : `${event.petName} — Hoje`;
+
+          showLocalNotification(
+            `🐾 ${event.title}`,
+            body,
+            { tag: `appointment-${event.id}`, url: '/agenda' }
+          );
+
+          notifiedIds.add(event.id);
+          localStorage.setItem(
+            'mypetcare_notified_events',
+            JSON.stringify([...notifiedIds])
+          );
+        }
+      }
+    };
+    check();
+  }
+}
+
 export function startAppointmentChecker(getEvents: () => ScheduledEvent[]): void {
-  if (checkInterval) return; // Já rodando
+  lastGetEvents = getEvents;
+  if (checkInterval) return;
 
   console.log('[push] Appointment checker started');
-  
-  const notifiedIds = new Set<string>(
-    JSON.parse(localStorage.getItem('mypetcare_notified_events') || '[]')
-  );
-
-  const check = () => {
-    if (Notification.permission !== 'granted') return;
-
-    const now = new Date();
-    const events = getEvents();
-
-    for (const event of events) {
-      if (notifiedIds.has(event.id)) continue;
-
-      const eventDate = new Date(`${event.date}T${event.time || '00:00'}:00`);
-      const diffMs = eventDate.getTime() - now.getTime();
-      const diffMinutes = diffMs / (1000 * 60);
-
-      // Notificar 30 min antes ou se já passou (até 5 min depois)
-      if (diffMinutes <= 30 && diffMinutes >= -5) {
-        const timeStr = event.time || '';
-        const body = timeStr
-          ? `${event.petName} — Hoje às ${timeStr}`
-          : `${event.petName} — Hoje`;
-
-        showLocalNotification(
-          `🐾 ${event.title}`,
-          body,
-          { tag: `appointment-${event.id}`, url: '/agenda' }
-        );
-
-        notifiedIds.add(event.id);
-        localStorage.setItem(
-          'mypetcare_notified_events',
-          JSON.stringify([...notifiedIds])
-        );
-      }
-    }
-  };
-
-  // Verificar imediatamente e a cada 1 minuto
-  check();
-  checkInterval = setInterval(check, 60_000);
+  refreshUpcomingNotifications(); // Check immediately
+  checkInterval = setInterval(refreshUpcomingNotifications, 60_000);
 }
 
 export function stopAppointmentChecker(): void {

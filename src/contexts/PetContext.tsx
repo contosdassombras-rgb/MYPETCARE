@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { deleteFile, getPathFromUrl } from '../lib/storage';
+import { refreshUpcomingNotifications } from '../lib/pushNotifications';
 
 export interface PetEvent {
   id: string;
@@ -271,6 +272,9 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         ...p,
         events: [...p.events, { ...event, id: data.id }]
       } : p));
+      
+      // Forçar atualização imediata do checker de notificações push
+      refreshUpcomingNotifications();
     }
   };
 
@@ -290,6 +294,24 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       .eq('id', eventId);
 
     if (error) throw error;
+
+    // Se marcado como concluído, adicionar automaticamente ao histórico/relatórios
+    if (updatedEvent.completed === true) {
+      const pet = pets.find(p => p.id === petId);
+      const event = pet?.events.find(e => e.id === eventId);
+      if (pet && event) {
+        // Mapear tipo de evento para tipo de histórico
+        const historyType = event.type === 'appointment' ? 'observation' : event.type;
+        addHistory(petId, {
+          type: historyType as any,
+          title: event.title,
+          date: event.date,
+          notes: event.notes || 'Concluído via Agenda',
+          value: 'Done'
+        });
+      }
+    }
+
     setPets(prev => prev.map(p => p.id === petId ? {
       ...p,
       events: p.events.map(e => e.id === eventId ? { ...e, ...updatedEvent } : e)

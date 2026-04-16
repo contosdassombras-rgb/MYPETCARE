@@ -17,21 +17,16 @@ type Lang = 'pt' | 'en' | 'es';
 
 // ─── Helpers ──────────────────────────────────────────────────────────
 async function sendRaw(to: string, subject: string, html: string): Promise<void> {
-  if (!RESEND_API_KEY) {
-    console.warn('[email] Resend API key not configured — email skipped.');
-    return;
-  }
+  console.log(`[email] Requesting delivery to: ${to} via Internal Proxy`);
 
   try {
-    const response = await fetch('https://api.resend.com/emails', {
+    const response = await fetch('/api/send-email', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: FROM_ADDRESS,
-        to: [to],
+        to,
         subject,
         html,
       }),
@@ -39,18 +34,13 @@ async function sendRaw(to: string, subject: string, html: string): Promise<void>
 
     if (!response.ok) {
       const err = await response.json();
-      console.error('[email] Resend API error details:', {
-        status: response.status,
-        statusText: response.statusText,
-        error: err
-      });
+      console.error('[email] Proxy delivery failed:', err);
       return;
     }
 
-    console.log(`[email] Sent "${subject}" to ${to}`);
+    console.log(`[email] Proxy accepted delivery for "${subject}" to ${to}`);
   } catch (error) {
-    console.error('[email] Failed to send email:', error);
-    // Nunca quebra o fluxo
+    console.error('[email] Failed to call email proxy:', error);
   }
 }
 

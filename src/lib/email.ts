@@ -39,7 +39,11 @@ async function sendRaw(to: string, subject: string, html: string): Promise<void>
 
     if (!response.ok) {
       const err = await response.json();
-      console.error('[email] Resend API error:', err);
+      console.error('[email] Resend API error details:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: err
+      });
       return;
     }
 

@@ -240,7 +240,7 @@ export const PetForm: React.FC = () => {
           </div>
         </div>
 
-        <Card className="p-10 rounded-[3rem] space-y-8 border-none bg-surface-container-low/30 shadow-none">
+        <Card className="p-6 md:p-10 rounded-[2.5rem] md:rounded-[3rem] space-y-8 border-none bg-surface-container-low/30 shadow-none">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <Input
               label={t('name')}
@@ -257,7 +257,7 @@ export const PetForm: React.FC = () => {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
             <Input
               label={t('birth_date')}
               type="date"

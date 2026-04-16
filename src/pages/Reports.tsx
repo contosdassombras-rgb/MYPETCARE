@@ -79,9 +79,9 @@ export const Reports: React.FC = () => {
 
   return (
     <div className="max-w-6xl mx-auto pb-24">
-      <header className="mb-12 print:hidden">
+      <header className="mb-12 print:hidden px-4 md:px-0">
         <h1 className="editorial-header">{t('reports')}</h1>
-        <div className="flex gap-4 mt-8 overflow-x-auto pb-4 no-scrollbar">
+        <div className="flex gap-4 mt-8 overflow-x-auto pb-4 no-scrollbar -mx-4 px-4 md:mx-0 md:px-0">
           {pets.map(p => (
             <button
               key={p.id}
@@ -192,9 +192,9 @@ export const Reports: React.FC = () => {
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-            {/* Weight Evolution */}
-            <Card className="p-10 rounded-[3rem] bg-surface-container-lowest shadow-xl border-none">
+          <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 px-4 md:px-0">
+          {weightBars.length > 0 && (
+            <Card className="col-span-full p-6 md:p-10 border-none bg-primary/5 shadow-none rounded-[2rem] md:rounded-[3rem]">
               <div className="flex items-center gap-6 mb-12">
                 <div className="p-4 bg-primary-container rounded-[1.5rem] text-primary">
                   <Activity className="w-10 h-10" />

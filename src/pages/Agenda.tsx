@@ -183,7 +183,7 @@ export const Agenda: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 ml-4">
+                  <div className="flex items-center gap-2 md:gap-3 ml-2 md:ml-4">
                     <button
                       onClick={async () => await updateEvent(event.petId, event.id, { completed: !event.completed })}
                       className={cn(
@@ -193,7 +193,7 @@ export const Agenda: React.FC = () => {
                           : 'text-on-surface-variant opacity-20 hover:opacity-100 hover:bg-surface-container-low'
                       )}
                     >
-                      {event.completed ? <CheckCircle2 className="w-10 h-10" /> : <Circle className="w-10 h-10" />}
+                      {event.completed ? <CheckCircle2 className="w-8 h-8 md:w-10 md:h-10" /> : <Circle className="w-8 h-8 md:w-10 md:h-10" />}
                     </button>
                     <button
                       onClick={async () => {
@@ -201,9 +201,9 @@ export const Agenda: React.FC = () => {
                           await deleteEvent(event.petId, event.id);
                         }
                       }}
-                      className="p-3 text-error hover:bg-error/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="p-2 md:p-3 text-error hover:bg-error/10 rounded-2xl md:opacity-0 group-hover:opacity-100 transition-opacity"
                     >
-                      <Trash2 className="w-6 h-6" />
+                      <Trash2 className="w-5 h-5 md:w-6 md:h-6" />
                     </button>
                   </div>
                 </Card>
@@ -228,14 +228,14 @@ export const Agenda: React.FC = () => {
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
-              className="relative w-full max-w-xl bg-surface rounded-t-[3rem] md:rounded-[3rem] p-10 shadow-2xl overflow-y-auto max-h-[90vh] border-t-4 md:border-t-0 border-primary"
+              className="relative w-full max-w-xl bg-surface rounded-t-[2.5rem] md:rounded-[3rem] p-6 md:p-10 shadow-2xl overflow-y-auto max-h-[95vh] md:max-h-[90vh] border-t-4 md:border-t-0 border-primary"
             >
-              <div className="flex justify-between items-center mb-10">
-                <h2 className="text-3xl font-black font-headline tracking-tighter">
+              <div className="flex justify-between items-center mb-6 md:mb-10">
+                <h2 className="text-2xl md:text-3xl font-black font-headline tracking-tighter">
                   {editingEvent ? t('edit_event') : t('add_event')}
                 </h2>
-                <Button variant="ghost" size="icon" onClick={handleClose} className="rounded-2xl">
-                  <X className="w-8 h-8" />
+                <Button variant="ghost" size="icon" onClick={handleClose} className="rounded-xl outline-none">
+                  <X className="w-6 h-6 md:w-8 md:h-8" />
                 </Button>
               </div>
 

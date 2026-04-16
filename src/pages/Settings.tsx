@@ -134,11 +134,11 @@ export const Settings: React.FC = () => {
       </header>
 
       {/* Tab Switcher */}
-      <div className="flex gap-2 p-2 mb-12 bg-surface-container-low/50 rounded-3xl mx-4">
+      <div className="flex gap-2 p-2 bg-surface-container-low/50 rounded-[2.5rem] mb-12 overflow-x-auto no-scrollbar scroll-smooth snap-x mx-4">
         <button 
           onClick={() => handleTabChange('profile')}
           className={cn(
-            "flex-1 py-4 rounded-2xl font-black transition-all",
+            "flex-1 min-w-[120px] py-4 rounded-2xl font-black transition-all snap-center",
             activeTab === 'profile' ? "bg-white shadow-lg text-primary scale-[1.02]" : "text-on-surface-variant opacity-40 hover:opacity-100"
           )}
         >
@@ -147,7 +147,7 @@ export const Settings: React.FC = () => {
         <button 
           onClick={() => handleTabChange('notifications')}
           className={cn(
-            "flex-1 py-4 rounded-2xl font-black transition-all",
+            "flex-1 min-w-[120px] py-4 rounded-2xl font-black transition-all snap-center",
             activeTab === 'notifications' ? "bg-white shadow-lg text-primary scale-[1.02]" : "text-on-surface-variant opacity-40 hover:opacity-100"
           )}
         >
@@ -156,7 +156,7 @@ export const Settings: React.FC = () => {
         <button 
           onClick={() => handleTabChange('app')}
           className={cn(
-            "flex-1 py-4 rounded-2xl font-black transition-all",
+            "flex-1 min-w-[120px] py-4 rounded-2xl font-black transition-all snap-center",
             activeTab === 'app' ? "bg-white shadow-lg text-primary scale-[1.02]" : "text-on-surface-variant opacity-40 hover:opacity-100"
           )}
         >
@@ -305,7 +305,7 @@ export const Settings: React.FC = () => {
                       <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-[0.2em] ml-2">
                         {t('notification_email_label')}
                       </label>
-                      <div className="flex gap-4">
+                      <div className="flex flex-col sm:flex-row gap-4">
                         <input
                           type="email"
                           value={formData.notificationEmail || user.session?.user?.email || ''}
@@ -316,7 +316,7 @@ export const Settings: React.FC = () => {
                         <Button 
                           onClick={handleSaveProfile}
                           variant="primary"
-                          className="px-8 rounded-2xl font-black"
+                          className="sm:px-8 py-5 sm:py-0 rounded-2xl font-black"
                         >
                           {t('save')}
                         </Button>

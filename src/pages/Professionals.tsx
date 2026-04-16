@@ -280,11 +280,11 @@ export const Professionals: React.FC = () => {
     <div className="max-w-6xl mx-auto pb-24">
       <header className="mb-12 px-2">
         <h1 className="editorial-header">{t('search_professionals')}</h1>
-        <div className="flex gap-4 mt-8 p-1.5 bg-surface-container-low rounded-2xl max-w-lg">
+        <div className="flex flex-wrap md:flex-nowrap gap-4 mt-8 p-1.5 bg-surface-container-low rounded-2xl md:max-w-lg mb-8">
           <button
             onClick={() => setActiveTab('clinics')}
             className={cn(
-              'flex-1 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] transition-all',
+              'flex-1 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] transition-all min-w-[140px]',
               activeTab === 'clinics' ? 'bg-surface-container-lowest shadow-lg text-primary scale-105' : 'text-on-surface-variant opacity-40 hover:opacity-100'
             )}
           >
@@ -293,7 +293,7 @@ export const Professionals: React.FC = () => {
           <button
             onClick={() => setActiveTab('recommendations')}
             className={cn(
-              'flex-1 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] transition-all',
+              'flex-1 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] transition-all min-w-[140px]',
               activeTab === 'recommendations' ? 'bg-surface-container-lowest shadow-lg text-primary scale-105' : 'text-on-surface-variant opacity-40 hover:opacity-100'
             )}
           >
@@ -324,7 +324,7 @@ export const Professionals: React.FC = () => {
               </Button>
             </div>
 
-            <Card className="bg-surface-container-low/30 border-none p-6 rounded-[2rem] flex flex-col justify-center">
+            <Card className="bg-surface-container-low/30 border-none p-6 rounded-[2rem] flex flex-col justify-center mt-6">
               <div className="flex justify-between items-center mb-4">
                 <span className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest opacity-60">{t('search_radius')}</span>
                 <span className="text-primary font-black text-xl">{radius}km</span>
@@ -361,12 +361,12 @@ export const Professionals: React.FC = () => {
             {!loading && clinics.map(clinic => (
               <motion.div key={clinic.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
                 <Card className="flex flex-col md:flex-row p-0 overflow-hidden border-none bg-surface-container-low/30 rounded-[2.5rem] group hover:bg-surface-container-low transition-colors duration-500 h-full">
-                  <div className="w-full md:w-40 bg-primary/5 flex items-center justify-center p-8 shrink-0 group-hover:bg-primary/10 transition-colors">
-                    <div className="w-20 h-20 bg-primary/10 text-primary rounded-[1.5rem] flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <Navigation className="w-10 h-10" />
+                  <div className="w-full md:w-40 bg-primary/5 flex items-center justify-center p-6 md:p-8 shrink-0 group-hover:bg-primary/10 transition-colors">
+                    <div className="w-16 h-16 md:w-20 md:h-20 bg-primary/10 text-primary rounded-2xl md:rounded-[1.5rem] flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <Navigation className="w-8 h-8 md:w-10 md:h-10" />
                     </div>
                   </div>
-                  <div className="p-8 flex flex-col justify-between flex-1">
+                  <div className="p-6 md:p-8 flex flex-col justify-between flex-1">
                     <div>
                       <h3 className="text-2xl font-black font-headline text-on-surface mb-2 leading-tight">{clinic.name}</h3>
                       <div className="flex items-start gap-2 text-on-surface-variant opacity-60 mb-6">

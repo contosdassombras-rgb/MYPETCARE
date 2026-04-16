@@ -54,18 +54,18 @@ export const PetProfile: React.FC = () => {
   return (
     <div className="min-h-screen pb-20 max-w-5xl mx-auto">
       {/* Hero Section */}
-      <div className="relative h-[40vh] md:h-[50vh] w-full rounded-[3rem] overflow-hidden shadow-2xl mb-12">
+      <div className="relative h-[45vh] md:h-[50vh] w-full rounded-[2rem] md:rounded-[3rem] overflow-hidden shadow-2xl mb-8 md:mb-12">
         <img src={pet.photo} alt={pet.name} className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
         
-        <div className="absolute bottom-12 left-10 right-10 flex justify-between items-end">
-          <div>
-            <h1 className="text-6xl font-black font-headline text-white mb-4 tracking-tighter">{pet.name}</h1>
-            <div className="flex items-center gap-3">
-              <span className="px-6 py-2 bg-white/20 backdrop-blur-xl text-white text-sm font-bold rounded-full">
+        <div className="absolute bottom-6 md:bottom-12 left-6 right-6 md:left-10 md:right-10 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+          <div className="flex-1">
+            <h1 className="text-4xl md:text-6xl font-black font-headline text-white mb-4 tracking-tighter leading-none">{pet.name}</h1>
+            <div className="flex flex-wrap items-center gap-2 md:gap-3">
+              <span className="px-4 md:px-6 py-1.5 md:py-2 bg-white/20 backdrop-blur-xl text-white text-[10px] md:text-sm font-bold rounded-full">
                 {calculateAge(pet.birthDate, t)}
               </span>
-              <Badge variant={pet.status === 'up_to_date' ? 'success' : 'error'} className="py-2.5">
+              <Badge variant={pet.status === 'up_to_date' ? 'success' : 'error'} className="py-2 md:py-2.5">
                 {pet.status === 'up_to_date' ? t('everything_up_to_date') : t('pending_care')}
               </Badge>
             </div>
@@ -73,18 +73,18 @@ export const PetProfile: React.FC = () => {
           <Button 
             onClick={() => navigate(`/pet/edit/${pet.id}`)}
             size="icon"
-            className="w-16 h-16 rounded-3xl"
+            className="w-12 h-12 md:w-16 md:h-16 rounded-2xl md:rounded-3xl shrink-0"
           >
-            <Edit2 className="w-8 h-8" />
+            <Edit2 className="w-6 h-6 md:w-8 md:h-8" />
           </Button>
         </div>
       </div>
 
       <div className="space-y-12">
         {/* Basic Info Grid */}
-        <section className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+        <section className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 px-2 md:px-0">
           {infoCards.map((card, i) => (
-            <Card key={i} className="p-8 border-none bg-surface-container-low shadow-none flex flex-col items-center text-center relative overflow-hidden group">
+            <Card key={i} className="p-4 md:p-8 border-none bg-surface-container-low shadow-none flex flex-col items-center text-center relative overflow-hidden group rounded-2xl md:rounded-[2.5rem]">
               <div className="p-4 bg-primary/10 rounded-2xl text-primary mb-4 transition-transform group-hover:scale-110">
                 <card.icon className="w-6 h-6" />
               </div>

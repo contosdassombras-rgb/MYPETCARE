@@ -34,7 +34,11 @@
 
 @layer base {
   body {
-    @apply bg-surface text-on-surface font-body antialiased;
+    @apply bg-surface text-on-surface font-body antialiased overflow-x-hidden;
+  }
+  
+  html {
+    @apply overflow-x-hidden;
   }
   
   h1, h2, h3, h4, h5, h6 {

@@ -192,9 +192,9 @@ export const Reports: React.FC = () => {
             </Button>
           </div>
 
-          <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 px-4 md:px-0">
-          {weightBars.length > 0 && (
-            <Card className="col-span-full p-6 md:p-10 border-none bg-primary/5 shadow-none rounded-[2rem] md:rounded-[3rem]">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 px-4 md:px-0">
+            {/* Weight Evolution */}
+            <Card className="p-6 md:p-10 rounded-[2.5rem] md:rounded-[3rem] bg-surface-container-lowest shadow-xl border-none">
               <div className="flex items-center gap-6 mb-12">
                 <div className="p-4 bg-primary-container rounded-[1.5rem] text-primary">
                   <Activity className="w-10 h-10" />

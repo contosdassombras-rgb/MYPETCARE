@@ -499,22 +499,20 @@ export const Professionals: React.FC = () => {
             {/* card content... same as before but inside the filtered map */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-bl-[5rem] -mr-8 -mt-8 transition-transform group-hover:scale-110" />
             
-            <div className="flex justify-between items-start mb-8 relative z-10">
-              <div className="flex gap-5">
-                <div className="w-16 h-16 bg-primary-container text-primary rounded-2xl flex items-center justify-center shadow-inner">
-                  <User className="w-8 h-8" />
+            <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-8 relative z-10">
+              <div className="flex gap-4">
+                <div className="w-12 h-12 md:w-16 md:h-16 bg-primary-container text-primary rounded-2xl flex items-center justify-center shadow-inner shrink-0">
+                  <User className="w-6 h-6 md:w-8 md:h-8" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-black text-on-surface mb-1">{pro.name}</h3>
-                  <Badge variant="surface" className="px-3 py-1 scale-90 -ml-1 text-[10px]">{t(pro.type) || pro.type}</Badge>
+                  <h3 className="text-xl font-black text-on-surface mb-1 leading-tight">{pro.name}</h3>
+                  <Badge variant="surface" className="px-3 py-1 text-[9px] uppercase tracking-tighter opacity-70">{t(pro.type) || pro.type}</Badge>
                 </div>
               </div>
-              <div className="flex flex-col items-end gap-1">
-                <div className="flex items-center gap-1.5 text-secondary font-black bg-secondary/10 px-4 py-2 rounded-2xl">
-                  <Star className={cn("w-5 h-5", pro.average_rating ? "fill-current" : "opacity-20")} />
-                  {pro.average_rating ? pro.average_rating.toFixed(1) : 'S/N'}
-                </div>
-                <span className="text-[10px] font-black opacity-30 uppercase">{pro.total_ratings} {t('ratings')}</span>
+              <div className="flex items-center gap-1.5 text-secondary font-black bg-secondary/10 px-4 py-2 rounded-2xl self-end sm:self-auto">
+                <Star className={cn("w-4 h-4 md:w-5 md:h-5", pro.average_rating ? "fill-current" : "opacity-20")} />
+                <span className="text-sm md:text-base">{pro.average_rating ? pro.average_rating.toFixed(1) : 'S/N'}</span>
+                <span className="text-[9px] opacity-30 uppercase ml-2">({pro.total_ratings})</span>
               </div>
             </div>
 

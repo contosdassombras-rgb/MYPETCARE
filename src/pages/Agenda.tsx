@@ -134,60 +134,54 @@ export const Agenda: React.FC = () => {
         </Button>
       </header>
 
-      <div className="space-y-4">
+      <div className="space-y-6 md:space-y-12">
         {allEvents.length === 0 ? (
-          <div className="text-center py-32 bg-surface-container-low/30 rounded-[3rem] border-2 border-dashed border-surface-container-high/50">
-            <CalendarIcon className="w-16 h-16 text-on-surface-variant opacity-20 mx-auto mb-6" />
+          <div className="text-center py-20 bg-surface-container-low/20 rounded-[3rem] border-2 border-dashed border-surface-container-high/50">
+            <CalendarIcon className="w-16 h-16 text-primary opacity-20 mx-auto mb-6" />
             <p className="text-on-surface-variant font-black uppercase tracking-widest opacity-40">{t('no_events')}</p>
           </div>
         ) : (
-          allEvents.map(event => {
-            const Icon = getEventIcon(event.type);
+          allEvents.map((event) => {
+            const pet = pets.find(p => p.id === event.petId);
             return (
               <motion.div
                 key={event.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
+                layout
               >
-                <Card 
-                  className={cn(
-                    'p-6 rounded-3xl flex items-center justify-between group border-2 transition-all',
-                    event.completed
-                      ? 'border-transparent bg-surface-container-low/40 opacity-50'
-                      : 'border-surface-container-high/30 hover:border-primary/40'
-                  )}
-                >
-                  <div className="flex items-center gap-6 flex-1 min-w-0">
+                <Card className="flex items-center justify-between p-4 md:p-8 bg-surface-container-low/40 border-none rounded-[2rem] md:rounded-[3rem] group hover:bg-surface-container-low transition-all duration-500">
+                  <div className="flex items-center gap-4 md:gap-8 min-w-0">
                     <div className={cn(
-                      'w-16 h-16 rounded-[1.25rem] flex items-center justify-center transition-colors shrink-0',
-                      event.completed ? 'bg-surface-container-low text-on-surface-variant' : 'bg-primary-container text-primary'
+                      "p-4 md:p-6 rounded-2xl md:rounded-[2rem] transition-all group-hover:scale-110 shrink-0",
+                      event.type === 'vaccine' ? "bg-primary/10 text-primary" :
+                      event.type === 'medication' ? "bg-secondary/10 text-secondary" :
+                      "bg-surface-container-high text-on-surface-variant"
                     )}>
-                      <Icon className="w-8 h-8" />
+                      {event.type === 'vaccine' ? <Syringe className="w-6 h-6 md:w-8 md:h-8" /> :
+                       event.type === 'medication' ? <Pill className="w-6 h-6 md:w-8 md:h-8" /> :
+                       <CalendarIcon className="w-6 h-6 md:w-8 md:h-8" />}
                     </div>
-                    <div className="cursor-pointer overflow-hidden flex-1" onClick={() => handleEdit(event.petId, event)}>
-                      <div className="flex items-center gap-3 mb-1.5 overflow-hidden">
-                        <h3 className="font-black text-xl text-on-surface leading-tight truncate">{event.title}</h3>
-                        <span className="text-[10px] font-black px-3 py-1 bg-surface-container-high rounded-full uppercase tracking-widest opacity-60 shrink-0">
+                    
+                    <div className="min-w-0 pr-2">
+                       <div className="flex flex-wrap items-center gap-2 mb-1">
+                        <h3 className="text-xl md:text-2xl font-black font-headline truncate leading-tight">{event.title}</h3>
+                        <Badge variant="surface" className="text-[9px] uppercase tracking-tighter opacity-60 px-2 py-0.5 rounded-lg shrink-0">
                           {event.petName}
-                        </span>
+                        </Badge>
                       </div>
-                      <p className="text-sm text-on-surface-variant flex items-center gap-2 font-bold opacity-70">
-                        <Clock className="w-4 h-4" />
-                        {formatEventDate(event.date, event.time)}
-                      </p>
-                      {event.recurrence && event.recurrence !== 'none' && (
-                        <p className="text-[10px] text-primary font-black uppercase tracking-widest mt-2 flex items-center gap-1.5 italic">
-                          <span className="text-lg">↻</span> {t(`recurrence_${event.recurrence}`)}
-                        </p>
-                      )}
+                      <div className="flex items-center gap-3 text-on-surface-variant opacity-50 font-bold text-xs md:text-sm">
+                        <Clock className="w-4 h-4 shrink-0" />
+                        <span>{formatEventDate(event.date, event.time)}</span>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 md:gap-3 ml-2 md:ml-4">
+                  <div className="flex items-center gap-1 md:gap-3 shrink-0">
                     <button
                       onClick={async () => await updateEvent(event.petId, event.id, { completed: !event.completed })}
                       className={cn(
-                        'p-2 rounded-full transition-all active:scale-90',
+                        'p-2 md:p-3 rounded-full transition-all active:scale-90',
                         event.completed
                           ? 'text-primary bg-primary/10'
                           : 'text-on-surface-variant opacity-20 hover:opacity-100 hover:bg-surface-container-low'

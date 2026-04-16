@@ -49,16 +49,16 @@ export const Settings: React.FC = () => {
   const [formData, setFormData] = useState({
     name: user.name || '',
     phone: user.phone || '',
-    notificationEmail: user.notificationEmail || ''
+    notificationEmail: user.notificationEmail || user.session?.user?.email || '',
   });
 
   useEffect(() => {
     setFormData({
       name: user.name || '',
       phone: user.phone || '',
-      notificationEmail: user.notificationEmail || ''
+      notificationEmail: user.notificationEmail || user.session?.user?.email || '',
     });
-  }, [user.name, user.phone, user.notificationEmail]);
+  }, [user.name, user.phone, user.notificationEmail, user.session?.user?.email]);
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -127,7 +127,7 @@ export const Settings: React.FC = () => {
   };
 
   return (
-    <div className="max-w-3xl mx-auto pb-24">
+    <div className="max-w-3xl mx-auto pb-24 px-4 md:px-0">
       <header className="mb-12 px-4">
         <h1 className="editorial-header">{t('profile')}</h1>
         <p className="text-on-surface-variant mt-2 font-medium opacity-60 uppercase tracking-widest text-xs">{t('manage_account_description')}</p>
@@ -138,7 +138,7 @@ export const Settings: React.FC = () => {
         <button 
           onClick={() => handleTabChange('profile')}
           className={cn(
-            "flex-1 min-w-[120px] py-4 rounded-2xl font-black transition-all snap-center",
+            "flex-1 min-w-[80px] md:min-w-[120px] py-4 rounded-2xl font-black transition-all snap-center text-xs md:text-base",
             activeTab === 'profile' ? "bg-white shadow-lg text-primary scale-[1.02]" : "text-on-surface-variant opacity-40 hover:opacity-100"
           )}
         >
@@ -147,7 +147,7 @@ export const Settings: React.FC = () => {
         <button 
           onClick={() => handleTabChange('notifications')}
           className={cn(
-            "flex-1 min-w-[120px] py-4 rounded-2xl font-black transition-all snap-center",
+            "flex-1 min-w-[80px] md:min-w-[120px] py-4 rounded-2xl font-black transition-all snap-center text-xs md:text-base",
             activeTab === 'notifications' ? "bg-white shadow-lg text-primary scale-[1.02]" : "text-on-surface-variant opacity-40 hover:opacity-100"
           )}
         >
@@ -156,7 +156,7 @@ export const Settings: React.FC = () => {
         <button 
           onClick={() => handleTabChange('app')}
           className={cn(
-            "flex-1 min-w-[120px] py-4 rounded-2xl font-black transition-all snap-center",
+            "flex-1 min-w-[80px] md:min-w-[120px] py-4 rounded-2xl font-black transition-all snap-center text-xs md:text-base",
             activeTab === 'app' ? "bg-white shadow-lg text-primary scale-[1.02]" : "text-on-surface-variant opacity-40 hover:opacity-100"
           )}
         >
@@ -179,8 +179,8 @@ export const Settings: React.FC = () => {
                 </h2>
               </div>
 
-              <Card className="p-10 rounded-[3rem] space-y-10 border-none bg-surface-container-low/30 shadow-none">
-                <div className="flex flex-col items-center gap-6">
+              <Card className="p-6 md:p-10 rounded-[2.5rem] md:rounded-[3rem] border-none bg-surface-container-lowest shadow-xl ring-1 ring-surface-container-high/20">
+                <div className="flex flex-col md:flex-row items-center gap-8 mb-12">
                   <div className="relative group">
                     <div className="w-32 h-32 rounded-[2.5rem] overflow-hidden border-4 border-primary shadow-2xl bg-surface-container-low transition-transform group-hover:scale-105 duration-500">
                       {user.photo ? (
@@ -283,11 +283,11 @@ export const Settings: React.FC = () => {
               <h2 className="text-2xl font-black font-headline tracking-tighter px-4">
                 {t('notifications')}
               </h2>
-              <Card className="p-8 space-y-8 border-none bg-surface-container-low/30 shadow-none rounded-[2.5rem]">
+              <Card className="p-4 md:p-8 space-y-8 border-none bg-surface-container-low/30 shadow-none rounded-[2rem] md:rounded-[2.5rem]">
                 <div className="space-y-6">
                   <div className="flex items-center gap-6">
-                    <div className="p-4 rounded-2xl bg-surface-container-low text-primary shadow-sm">
-                      <Mail className="w-7 h-7" />
+                    <div className="p-3 md:p-4 rounded-2xl bg-surface-container-low text-primary shadow-sm shrink-0">
+                      <Mail className="w-6 h-6 md:w-7 md:h-7" />
                     </div>
                     <div className="flex-1">
                       <span className="font-black text-on-surface text-lg leading-tight">{t('email_reminders')}</span>
@@ -339,37 +339,37 @@ export const Settings: React.FC = () => {
               <h2 className="text-2xl font-black font-headline tracking-tighter px-4">
                 {t('app_settings')}
               </h2>
-              <Card className="p-2 overflow-hidden border-none bg-surface-container-low/30 shadow-none rounded-[2.5rem]">
+              <Card className="p-2 overflow-hidden border-none bg-surface-container-low/30 shadow-none rounded-[2rem] md:rounded-[2.5rem]">
                 <button 
                   onClick={handleChangeLanguage}
-                  className="w-full flex items-center justify-between p-8 border-b border-surface-container-high/20 hover:bg-surface-container-low transition-colors text-left group"
+                  className="w-full flex items-center justify-between p-4 md:p-8 border-b border-surface-container-high/20 hover:bg-surface-container-low transition-colors text-left group"
                 >
-                  <div className="flex items-center gap-6">
-                    <div className="p-4 rounded-2xl bg-surface-container-low text-primary shadow-sm">
-                      <Globe className="w-7 h-7" />
+                  <div className="flex items-center gap-4 md:gap-6">
+                    <div className="p-3 md:p-4 rounded-2xl bg-surface-container-low text-primary shadow-sm shrink-0">
+                      <Globe className="w-6 h-6 md:w-7 md:h-7" />
                     </div>
                     <div>
-                      <span className="font-black text-on-surface text-lg leading-tight">{t('choose_language')}</span>
-                      <p className="text-xs text-on-surface-variant font-bold uppercase tracking-widest opacity-40 mt-1">{langLabel[language || 'pt']}</p>
+                      <span className="font-black text-on-surface text-base md:text-lg leading-tight">{t('choose_language')}</span>
+                      <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest opacity-40 mt-1">{langLabel[language || 'pt']}</p>
                     </div>
                   </div>
-                  <ChevronRight className="w-6 h-6 text-on-surface-variant opacity-30 group-hover:translate-x-1 transition-transform" />
+                  <ChevronRight className="w-5 h-5 md:w-6 md:h-6 text-on-surface-variant opacity-30 group-hover:translate-x-1 transition-transform" />
                 </button>
                 
                 <button 
                   onClick={handleInstallPWA}
-                  className="w-full flex items-center justify-between p-8 hover:bg-primary/5 transition-colors text-left group"
+                  className="w-full flex items-center justify-between p-4 md:p-8 hover:bg-primary/5 transition-colors text-left group"
                 >
-                  <div className="flex items-center gap-6">
-                    <div className="p-4 rounded-2xl bg-primary text-on-primary shadow-xl shadow-primary/20">
-                      <Download className="w-7 h-7" />
+                  <div className="flex items-center gap-4 md:gap-6">
+                    <div className="p-3 md:p-4 rounded-2xl bg-primary text-on-primary shadow-xl shadow-primary/20 shrink-0">
+                      <Download className="w-6 h-6 md:w-7 md:h-7" />
                     </div>
                     <div>
-                      <span className="font-black text-on-surface text-lg leading-tight">{t('install_mypetcare')}</span>
-                      <p className="text-xs text-on-surface-variant font-bold uppercase tracking-widest opacity-40 mt-1">Acesso Rápido PWA</p>
+                      <span className="font-black text-on-surface text-base md:text-lg leading-tight">{t('install_mypetcare')}</span>
+                      <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest opacity-40 mt-1">Acesso Rápido PWA</p>
                     </div>
                   </div>
-                  <ChevronRight className="w-6 h-6 text-on-surface-variant opacity-30 group-hover:translate-x-1 transition-transform" />
+                  <ChevronRight className="w-5 h-5 md:w-6 md:h-6 text-on-surface-variant opacity-30 group-hover:translate-x-1 transition-transform" />
                 </button>
               </Card>
 
@@ -377,18 +377,18 @@ export const Settings: React.FC = () => {
                 <h2 className="text-2xl font-black font-headline tracking-tighter px-4">
                   {t('support_settings')}
                 </h2>
-                <Card className="p-2 overflow-hidden border-none bg-surface-container-low/30 shadow-none rounded-[2.5rem]">
+                <Card className="p-2 overflow-hidden border-none bg-surface-container-low/30 shadow-none rounded-[2rem] md:rounded-[2.5rem]">
                   <button 
                     onClick={signOut}
-                    className="w-full flex items-center justify-between p-8 hover:bg-error/5 transition-colors text-left group"
+                    className="w-full flex items-center justify-between p-4 md:p-8 hover:bg-error/5 transition-colors text-left group"
                   >
-                    <div className="flex items-center gap-6">
-                      <div className="p-4 rounded-2xl bg-error/10 text-error">
-                        <LogOut className="w-7 h-7" />
+                    <div className="flex items-center gap-4 md:gap-6">
+                      <div className="p-3 md:p-4 rounded-2xl bg-error/10 text-error shrink-0">
+                        <LogOut className="w-6 h-6 md:w-7 md:h-7" />
                       </div>
-                      <span className="font-black text-error text-lg leading-tight">{t('sign_out')}</span>
+                      <span className="font-black text-error text-base md:text-lg leading-tight">{t('sign_out')}</span>
                     </div>
-                    <ChevronRight className="w-6 h-6 text-on-surface-variant opacity-30 group-hover:translate-x-1 transition-transform" />
+                    <ChevronRight className="w-5 h-5 md:w-6 md:h-6 text-on-surface-variant opacity-30 group-hover:translate-x-1 transition-transform" />
                   </button>
                 </Card>
               </section>

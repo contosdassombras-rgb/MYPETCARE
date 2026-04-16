@@ -15,7 +15,7 @@ import { Badge } from '../components/ui/Badge';
 export const Dashboard: React.FC = () => {
   const { t } = useLanguage();
   const { user } = useUser();
-  const { pets, loading, syncLocalData, deletePet } = usePets();
+  const { pets, loading, syncLocalData, deletePet, updateEvent, deleteEvent } = usePets();
   const navigate = useNavigate();
   const [syncing, setSyncing] = React.useState(false);
   const [hasLocalData, setHasLocalData] = React.useState(!!localStorage.getItem('mypetcare_pets'));
@@ -294,23 +294,72 @@ Return only the JSON. No explanation, no markdown, no backticks.`;
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {allEvents.length > 0 ? (
-            allEvents.map(event => (
-              <Card key={event.id} className="flex items-center gap-6 p-6 border-l-4 border-l-primary">
-                <div className="bg-primary/10 w-16 h-16 rounded-2xl flex flex-col items-center justify-center text-primary shrink-0">
-                  <span className="text-xs font-black uppercase">{new Date(`${event.date}T00:00:00`).toLocaleDateString(undefined, { month: 'short' })}</span>
-                  <span className="text-2xl font-black leading-none">{new Date(`${event.date}T00:00:00`).getDate()}</span>
+            allEvents.map(event => {
+              const pet = pets.find(p => (p.events || []).some(e => e.id === event.id));
+              return (
+              <Card key={event.id} className="flex flex-col gap-4 p-6 border-l-4 border-l-primary">
+                <div className="flex items-center gap-6">
+                  <div className="bg-primary/10 w-16 h-16 rounded-2xl flex flex-col items-center justify-center text-primary shrink-0">
+                    <span className="text-xs font-black uppercase">{new Date(`${event.date}T00:00:00`).toLocaleDateString(undefined, { month: 'short' })}</span>
+                    <span className="text-2xl font-black leading-none">{new Date(`${event.date}T00:00:00`).getDate()}</span>
+                  </div>
+                  <div className="overflow-hidden flex-1">
+                    <h4 className="font-black text-on-surface truncate leading-tight mb-1">{event.title}</h4>
+                    <p className="text-xs font-bold text-primary mb-2 opacity-80">{event.petName}</p>
+                    <p className="text-[10px] text-on-surface-variant flex items-center gap-1.5 font-bold uppercase tracking-wider">
+                      <Clock className="w-3.5 h-3.5" />
+                      {formatEventDate(event.date)}
+                      {event.time && ` • ${event.time}`}
+                    </p>
+                  </div>
                 </div>
-                <div className="overflow-hidden">
-                  <h4 className="font-black text-on-surface truncate leading-tight mb-1">{event.title}</h4>
-                  <p className="text-xs font-bold text-primary mb-2 opacity-80">{event.petName}</p>
-                  <p className="text-[10px] text-on-surface-variant flex items-center gap-1.5 font-bold uppercase tracking-wider">
-                    <Clock className="w-3.5 h-3.5" />
-                    {formatEventDate(event.date)}
-                    {event.time && ` • ${event.time}`}
-                  </p>
+                {/* Action Buttons */}
+                <div className="flex gap-2 mt-2">
+                  <button
+                    onClick={async () => {
+                      if (pet) {
+                        try {
+                          await updateEvent(pet.id, event.id, { completed: true });
+                        } catch (err) {
+                          console.error('Error completing event:', err);
+                        }
+                      }
+                    }}
+                    className="flex-1 py-3 bg-primary/10 text-primary rounded-2xl text-xs font-black uppercase tracking-wider hover:bg-primary hover:text-on-primary transition-all active:scale-95"
+                  >
+                    ✅ {t('completed_action') || 'Concluído'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      const wantsReschedule = window.confirm(
+                        t('reschedule_question') || 'Deseja reagendar este compromisso?'
+                      );
+                      if (wantsReschedule) {
+                        navigate('/agenda');
+                      }
+                    }}
+                    className="flex-1 py-3 bg-surface-container-low text-on-surface-variant rounded-2xl text-xs font-black uppercase tracking-wider hover:bg-secondary/20 hover:text-secondary transition-all active:scale-95"
+                  >
+                    🔄 {t('not_completed_action') || 'Reagendar'}
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (pet && window.confirm(t('delete_event_confirm') || 'Excluir este agendamento?')) {
+                        try {
+                          await deleteEvent(pet.id, event.id);
+                        } catch (err) {
+                          console.error('Error deleting event:', err);
+                        }
+                      }
+                    }}
+                    className="py-3 px-4 bg-error/10 text-error rounded-2xl text-xs font-black hover:bg-error hover:text-white transition-all active:scale-95"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
               </Card>
-            ))
+              );
+            })
           ) : (
             <div className="col-span-full p-12 bg-surface-container-low rounded-[2rem] text-center border-2 border-dashed border-surface-container-high">
               <p className="text-on-surface-variant font-bold uppercase tracking-widest opacity-40">{t('no_events')}</p>

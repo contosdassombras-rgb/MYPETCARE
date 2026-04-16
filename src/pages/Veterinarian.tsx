@@ -31,10 +31,7 @@ export const Veterinarian: React.FC = () => {
   const [contacts, setContacts] = useState<Contact[]>(() => {
     const saved = localStorage.getItem('mypetcare_contacts');
     try {
-      return saved ? JSON.parse(saved) : [
-        { id: '1', name: 'Dr. Sarah Mitchell', phone: '+1 234 567 890', whatsapp: '+1234567890', email: 'sarah@vet.com', type: 'veterinarian', city: 'São Paulo', state: 'SP' },
-        { id: '2', name: 'Happy Paws Clinic', phone: '+1 098 765 432', email: 'contact@happypaws.com', type: 'clinic', city: 'Rio de Janeiro', state: 'RJ' },
-      ];
+      return saved ? JSON.parse(saved) : [];
     } catch {
       return [];
     }
@@ -58,6 +55,17 @@ export const Veterinarian: React.FC = () => {
     setContacts(updated);
     localStorage.setItem('mypetcare_contacts', JSON.stringify(updated));
   };
+
+  // Purge dummy data from localStorage if it exists (for returning users)
+  useEffect(() => {
+    const dummyIds = ['1', '2'];
+    const hasDummies = contacts.some(c => dummyIds.includes(c.id));
+    if (hasDummies) {
+      console.log('[Veterinarian] Purging dummy records...');
+      const filtered = contacts.filter(c => !dummyIds.includes(c.id));
+      saveContacts(filtered);
+    }
+  }, [contacts]);
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();

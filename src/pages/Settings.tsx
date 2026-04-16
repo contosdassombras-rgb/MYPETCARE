@@ -69,7 +69,25 @@ export const Settings: React.FC = () => {
     }
   };
 
-  const handlePushToggle = () => updateUser({ pushEnabled: !user.pushEnabled });
+  const handlePushToggle = async () => {
+    if (!user.pushEnabled) {
+      // Ativando — solicitar permissão do navegador
+      const { requestPushPermission, isPushSupported } = await import('../lib/pushNotifications');
+      if (!isPushSupported()) {
+        alert(t('push_not_supported') || 'Push notifications are not supported on this browser.');
+        return;
+      }
+      const granted = await requestPushPermission();
+      if (!granted) {
+        alert(t('push_permission_denied') || 'Permission denied. Enable notifications in your browser settings.');
+        return;
+      }
+      updateUser({ pushEnabled: true });
+    } else {
+      // Desativando
+      updateUser({ pushEnabled: false });
+    }
+  };
   const handleEmailToggle = () => updateUser({ emailEnabled: !user.emailEnabled });
   
   const handleSaveProfile = async () => {

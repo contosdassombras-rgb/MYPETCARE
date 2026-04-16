@@ -1,36 +1,36 @@
 import { useEffect, useState, useRef } from 'react';
 import { useUser } from '../contexts/UserContext';
+import { usePets } from '../contexts/PetContext';
+import { startAppointmentChecker, stopAppointmentChecker, type ScheduledEvent } from '../lib/pushNotifications';
 
 const INSTANCE_ID = import.meta.env.VITE_PUSHER_BEAMS_INSTANCE_ID as string | undefined;
 
 /**
- * Pusher Beams push notification hook.
- * - Gated behind user authentication (only initializes when session exists)
- * - Completely non-blocking: errors are silently logged, never crash the UI
- * - Handles all browser permission states gracefully
- * - Uses dynamic import to avoid breaking the app if SDK fails to load
+ * Push notification hook — Pusher Beams + Appointment Checker.
+ * - Gated behind user authentication
+ * - Completely non-blocking: errors are silently logged
+ * - Monitors upcoming appointments and sends local push notifications
  */
 export const usePushNotifications = () => {
-  const { session } = useUser();
+  const { session, user } = useUser();
+  const { pets } = usePets();
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const clientRef = useRef<any>(null);
   const initAttempted = useRef(false);
+  const checkerStarted = useRef(false);
 
+  // ─── Pusher Beams initialization ────────────────────────────────────
   useEffect(() => {
-    // Only initialize when a user is authenticated and we have an instance ID
     if (!session?.user?.id || !INSTANCE_ID) return;
-    // Only attempt init once per session
     if (initAttempted.current) return;
     initAttempted.current = true;
 
-    // Check browser support — don't error if not supported
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
       console.warn('[Beams] Push notifications not supported in this browser.');
       return;
     }
 
-    // Check permission before doing anything — don't prompt if already denied
     if (Notification.permission === 'denied') {
       console.warn('[Beams] Push notification permission has been denied by user.');
       return;
@@ -40,7 +40,6 @@ export const usePushNotifications = () => {
 
     const initBeams = async () => {
       try {
-        // Dynamic import: prevents SDK errors from crashing the app bundle
         const PusherPushNotifications = await import('@pusher/push-notifications-web');
         if (!mounted) return;
 
@@ -48,11 +47,9 @@ export const usePushNotifications = () => {
           instanceId: INSTANCE_ID!,
         });
 
-        // start() requests permission internally if needed and registers the service worker
         await client.start();
         if (!mounted) return;
 
-        // Subscribe to global channel + user-specific channel
         await client.addDeviceInterest('appointments');
         await client.addDeviceInterest(`user-${session.user.id}`);
 
@@ -62,7 +59,6 @@ export const usePushNotifications = () => {
       } catch (err: unknown) {
         if (!mounted) return;
         const msg = err instanceof Error ? err.message : String(err);
-        // Log as warning — this is non-fatal
         console.warn('[Beams] Non-fatal initialization error:', msg);
         setError(msg);
       }
@@ -75,12 +71,56 @@ export const usePushNotifications = () => {
     };
   }, [session?.user?.id]);
 
-  // Reset init flag on logout so it can re-initialize on next login
+  // ─── Appointment Checker (local push notifications) ─────────────────
+  useEffect(() => {
+    // Only start if push is enabled, user is logged in, and permission granted
+    if (!session?.user?.id || !user.pushEnabled) {
+      if (checkerStarted.current) {
+        stopAppointmentChecker();
+        checkerStarted.current = false;
+      }
+      return;
+    }
+
+    if (Notification.permission !== 'granted') return;
+    if (checkerStarted.current) return;
+
+    // Build event getter from current pets
+    const getEvents = (): ScheduledEvent[] => {
+      try {
+        return pets
+          .flatMap(p => (p.events || []).map(e => ({
+            id: e.id,
+            title: e.title,
+            petName: p.name,
+            date: e.date,
+            time: e.time,
+            type: e.type,
+          })))
+          .filter(e => !e.date ? false : true);
+      } catch {
+        return [];
+      }
+    };
+
+    startAppointmentChecker(getEvents);
+    checkerStarted.current = true;
+    console.log('[Push] Appointment checker activated');
+
+    return () => {
+      stopAppointmentChecker();
+      checkerStarted.current = false;
+    };
+  }, [session?.user?.id, user.pushEnabled, pets]);
+
+  // Reset on logout
   useEffect(() => {
     if (!session?.user?.id) {
       initAttempted.current = false;
+      checkerStarted.current = false;
       setIsSubscribed(false);
       setError(null);
+      stopAppointmentChecker();
     }
   }, [session?.user?.id]);
 

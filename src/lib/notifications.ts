@@ -1,4 +1,5 @@
 import { sendAppointmentEmail } from './email';
+import { showLocalNotification } from './pushNotifications';
 
 export interface AppointmentNotification {
   title: string;
@@ -12,20 +13,25 @@ export interface AppointmentNotification {
 
 /**
  * Dispara as notificações habilitadas para um agendamento.
- * Inclui Push (log) e Email (Resend) — com suporte a idioma.
+ * Inclui Push (Web Notification API) e Email (Resend) — com suporte a idioma.
  */
 export const triggerAppointmentNotifications = async (
   notification: AppointmentNotification,
   settings: { push: boolean; email: boolean; emailAddress?: string; lang?: 'pt' | 'en' | 'es' }
 ) => {
-  // 1. Notificação Push (Pusher Beams)
-  // No mundo real, isso seria disparado pelo Backend.
-  // Aqui, logamos o payload que seria enviado ao servidor.
+  // 1. Notificação Push Real (Web Notification API via Service Worker)
   if (settings.push) {
-    console.log('[notifications] Push Notification Triggered:', {
-      title: `Lembrete: ${notification.title}`,
-      body: `${notification.petName}: ${notification.body} em ${notification.date} às ${notification.time || '--:--'}`,
-    });
+    try {
+      const timeStr = notification.time ? ` às ${notification.time}` : '';
+      await showLocalNotification(
+        `🐾 ${notification.title}`,
+        `${notification.petName} — ${notification.date}${timeStr}`,
+        { tag: `appointment-new-${Date.now()}`, url: '/agenda' }
+      );
+      console.log('[notifications] Push notification sent');
+    } catch (err) {
+      console.error('[notifications] Push notification failed:', err);
+    }
   }
 
   // 2. Notificação por E-mail (Resend)
